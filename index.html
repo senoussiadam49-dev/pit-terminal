@@ -1005,8 +1005,7 @@ async function claude(messages, system=null, maxTokens=4000, useWebSearch=false,
   let fullSystem=system||SYS;
   if(injectCalib&&fullSystem===SYS){
     const calibProfile=await buildCalibProfile();
-    if(calibProfile) fullSystem=calibProfile+'
-'+SYS;
+    if(calibProfile) fullSystem=calibProfile+'\n'+SYS;
   }
 
   const body={
@@ -1447,17 +1446,12 @@ async function buildCalibProfile(){
   const closed=bets.filter(b=>b.status==='CLOSED'&&b.isReal);
   const paper=bets.filter(b=>b.status==='CLOSED'&&!b.isReal);
   const open=bets.filter(b=>b.status==='OPEN');
-
   if(!closed.length&&!paper.length) return '';
-
   const types={geo:'Geopolitical',tech:'Tech/AI',second:'Second-order'};
-  let profile='═══ YOUR CALIBRATION PROFILE (injected from bet log) ═══
-';
-  profile+=`Real bets closed: ${closed.length} | Paper trades closed: ${paper.length} | Open: ${open.length}
-
-`;
-
-  // Per market type
+  const lines=[];
+  lines.push('═══ YOUR CALIBRATION PROFILE (injected from bet log) ═══');
+  lines.push('Real bets closed: '+closed.length+' | Paper trades closed: '+paper.length+' | Open: '+open.length);
+  lines.push('');
   Object.entries(types).forEach(([key,label])=>{
     const tb=closed.filter(b=>b.mktType===key);
     if(!tb.length) return;
@@ -1466,58 +1460,34 @@ async function buildCalibProfile(){
     const avgConf=Math.round(tb.reduce((s,b)=>s+(b.dir==='YES'?b.myOdds:(100-b.myOdds)),0)/tb.length);
     const calibGap=winPct-avgConf;
     const pnl=tb.reduce((s,b)=>s+(b.pnl||0),0);
-    profile+=`${label}: ${tb.length} real bets · ${winPct}% win rate · avg confidence ${avgConf}%
-`;
-    if(Math.abs(calibGap)<=5) profile+=`  → Well calibrated on ${label}
-`;
-    else if(calibGap<-5) profile+=`  → OVERCONFIDENT by ${Math.abs(calibGap)}pp on ${label} — shade estimates DOWN ${Math.abs(calibGap)}pp
-`;
-    else profile+=`  → Underconfident by ${calibGap}pp on ${label} — can shade estimates UP slightly
-`;
-    profile+=`  → P&L: ${pnl>=0?'+':''}£${pnl}
-
-`;
+    lines.push(label+': '+tb.length+' real bets | '+winPct+'% win rate | avg confidence '+avgConf+'%');
+    if(Math.abs(calibGap)<=5) lines.push('  -> Well calibrated on '+label);
+    else if(calibGap<-5) lines.push('  -> OVERCONFIDENT by '+Math.abs(calibGap)+'pp on '+label+' -- shade estimates DOWN '+Math.abs(calibGap)+'pp');
+    else lines.push('  -> Underconfident by '+calibGap+'pp on '+label+' -- can shade estimates UP slightly');
+    lines.push('  -> P&L: '+(pnl>=0?'+':'')+'£'+pnl);
+    lines.push('');
   });
-
-  // Paper vs real divergence
   if(paper.length>=3&&closed.length>=3){
     const rWin=Math.round(closed.filter(b=>b.pnl>0).length/closed.length*100);
     const pWin=Math.round(paper.filter(b=>b.pnl>0).length/paper.length*100);
     const div=rWin-pWin;
     if(Math.abs(div)>10){
-      profile+=`PAPER vs REAL DIVERGENCE: Real ${rWin}% win, Paper ${pWin}% win (${div>0?'+':''}${div}pp)
-`;
-      if(div<-10) profile+=`  → You perform WORSE with real money. Likely execution hesitation or second-guessing. Trust the analysis.
-`;
-      else if(div>10) profile+=`  → You perform BETTER with real money. Good — pressure improves your decisions.
-`;
+      lines.push('PAPER vs REAL DIVERGENCE: Real '+rWin+'% win, Paper '+pWin+'% win ('+(div>0?'+':'')+div+'pp)');
+      if(div<-10) lines.push('  -> You perform WORSE with real money. Trust the analysis.');
+      else if(div>10) lines.push('  -> You perform BETTER with real money. Pressure improves your decisions.');
     }
   }
-
-  // Thesis quality
   const thesisHeld=closed.filter(b=>b.thesisHeld==='yes').length;
-  if(closed.length>=5){
-    profile+=`Thesis quality: ${thesisHeld}/${closed.length} theses held as predicted (${Math.round(thesisHeld/closed.length*100)}%)
-`;
-  }
-
-  // Overdue open bets
+  if(closed.length>=5) lines.push('Thesis quality: '+thesisHeld+'/'+closed.length+' theses held ('+Math.round(thesisHeld/closed.length*100)+'%)');
   const today=new Date();
-  const overdue=open.filter(b=>{
-    if(!b.resDate) return false;
-    return new Date(b.resDate)<today;
-  });
+  const overdue=open.filter(b=>b.resDate&&new Date(b.resDate)<today);
   if(overdue.length){
-    profile+=`
-OVERDUE (resolution date passed, no outcome logged):
-`;
-    overdue.forEach(b=>profile+=`  - "${b.q.substring(0,60)}" — was due ${b.resDate}
-`);
+    lines.push('');
+    lines.push('OVERDUE (resolution date passed, no outcome logged):');
+    overdue.forEach(b=>lines.push('  - "'+b.q.substring(0,60)+'" -- was due '+b.resDate));
   }
-
-  profile+='═══════════════════════════════════════════════════
-';
-  return profile;
+  lines.push('═══════════════════════════════════════════════════');
+  return lines.join('\n');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1572,8 +1542,7 @@ function _prefillFromVerdict(text){
   if(dirMatch) document.getElementById('bet_dir').value=dirMatch[1].toUpperCase();
   const stakeMatch=text.match(/Stake:\s*£(20|30|50)/i);
   if(stakeMatch) document.getElementById('bet_stake').value=stakeMatch[1];
-  const edgeMatch=text.match(/Edge type:\s*([^
-]+)/i);
+  const edgeMatch=text.match(/Edge type:[^\n]+/i);
   if(edgeMatch) document.getElementById('bet_edge').value=edgeMatch[1].trim().substring(0,100);
   const rrMatch=text.match(/Score:\s*([1-5])/i)||text.match(/Resolution Risk.*?([1-5])/i);
   if(rrMatch) document.getElementById('bet_resRisk').value=rrMatch[1];
@@ -1649,50 +1618,7 @@ async function saveBet(){
   // Telegram notification for real bets
   if(isReal){
     const edgePp=dir==='YES'?myOdds-mktOdds:(100-myOdds)-(100-mktOdds);
-    await sendTg(`◎ *PIT BET PLACED*
-
-${q.substring(0,80)}
-${dir} · £${stake} · Edge: ${edgePp>=0?'+':''}${edgePp.toFixed(1)}pp
-Mkt: ${mktOdds}% · Your P: ${myOdds}%${resDate?'
-Resolves: '+resDate:''}`);
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-// RESOLVE MODAL — log outcome, train AI
-// ═══════════════════════════════════════════════════════
-let _resolveOutcome=null;
-
-function openResolveModal(id){
-  const bets=getBets();
-  const b=bets.find(x=>x.id===id);if(!b)return;
-  _resolveOutcome=null;
-  document.getElementById('resolveId').value=id;
-  document.getElementById('resolveQ').textContent=b.q;
-  document.getElementById('resolve_pnl').value='';
-  document.getElementById('resolve_notes').value='';
-  document.getElementById('resolve_thesis').value='yes';
-  // Reset buttons
-  document.getElementById('resYesBtn').className='btn btn-lm btn-full';
-  document.getElementById('resNoBtn').className='btn btn-rd btn-full';
-  document.getElementById('resYesBtn').style.opacity='0.5';
-  document.getElementById('resNoBtn').style.opacity='0.5';
-  document.getElementById('resolveOv').classList.remove('hidden');
-}
-
-function setResolution(outcome){
-  _resolveOutcome=outcome;
-  document.getElementById('resYesBtn').style.opacity=outcome==='YES'?'1':'0.35';
-  document.getElementById('resNoBtn').style.opacity=outcome==='NO'?'1':'0.35';
-  // Auto-calculate PnL for real bets
-  const id=parseInt(document.getElementById('resolveId').value);
-  const bets=getBets();
-  const b=bets.find(x=>x.id===id);
-  if(b&&b.isReal){
-    const won=(b.dir==='YES'&&outcome==='YES')||(b.dir==='NO'&&outcome==='NO');
-    const mktPay=b.dir==='YES'?b.mktOdds:(100-b.mktOdds);
-    const autoPnl=won?Math.round(b.stake*(100/mktPay-1)):-b.stake;
-    document.getElementById('resolve_pnl').value=autoPnl;
+      await sendTg('BET PLACED\n\n'+q.substring(0,80)+'\n'+dir+' - £'+stake+' - Edge: '+(edgePp>=0?'+':'')+edgePp.toFixed(1)+'pp\nMkt: '+mktOdds+'% - Your P: '+myOdds+'%'+(resDate?'\nResolves: '+resDate:''));
   }
 }
 
@@ -1733,10 +1659,7 @@ async function saveResolution(){
   toast(b.isReal?(won?`✓ Won £${pnl} — outcome saved to AI memory`:`✗ Lost £${Math.abs(pnl)} — outcome saved to AI memory`):'Paper trade resolved — saved');
 
   if(b.isReal){
-    await sendTg(`${won?'✅':'❌'} *PIT ${won?'WIN':'LOSS'}*
-
-${b.q.substring(0,70)}
-${b.dir} · ${won?'+':''}£${pnl} · Thesis: ${thesisHeld}`);
+    await sendTg((won?'WIN':'LOSS')+' PIT\n\n'+b.q.substring(0,70)+'\n'+b.dir+' '+( won?'+':'')+pnl+' Thesis: '+thesisHeld);
   }
 }
 
@@ -1769,15 +1692,13 @@ async function openCoach(){
       const won=(b.dir==='YES'&&b.outcome==='YES')||(b.dir==='NO'&&b.outcome==='NO');
       const outcomeStr = b.outcome ? ((won?'WON':'LOST') + ' | Thesis: ' + (b.thesisHeld||'')) : '';
       return (b.isReal?'REAL':'PAPER') + ' | ' + (b.mktType||'').toUpperCase() + ' | ' + b.dir + ' | Stated: ' + (b.dir==='YES'?b.myOdds:(100-b.myOdds)) + '% | Mkt: ' + b.mktOdds + '% | ' + outcomeStr + ' | "' + b.q.substring(0,50) + '"';
-    }).join('
-');
+    }).join('\n');
 
     const openCtx=open.map(b=>{
       const today=new Date();
       const overdue=b.resDate&&new Date(b.resDate)<today;
       return (b.isReal?'REAL':'PAPER') + ' | ' + (b.mktType||'').toUpperCase() + ' | ' + b.dir + ' | Stated: ' + (b.dir==='YES'?b.myOdds:(100-b.myOdds)) + '% | ' + (overdue?'OVERDUE':'Open') + ' | "' + b.q.substring(0,50) + '"';
-    }).join('
-');
+    }).join('\n');
 
     const coachPrompt=`You are a prediction market coach reviewing this trader's full history. Be direct, specific, and honest.
 
@@ -2234,13 +2155,6 @@ function fmt(t){
     .split('\n').map(l=>l.startsWith('<')||!l.trim()?l:`<p>${l}</p>`).join('\n');
 }
 function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
-let tT;
-function toast(msg,type=''){
-  const el=document.getElementById('toast');el.textContent=msg;
-  el.className='toast show'+(type?' '+type:'');
-  clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('show'),2800);
-}
-function sl(ms){return new Promise(r=>setTimeout(r,ms));}
 </script>
 </body>
 </html>
