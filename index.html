@@ -1,0 +1,2789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>PIT — Polymarket Intelligence Terminal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#03060A;--bg1:#060B10;--bg2:#080E15;--bg3:#0C1520;--bg4:#111C2A;
+  --b1:#0F1E2E;--b2:#162333;--b3:#1E3045;
+  --cy:#00E5FF;--cydim:rgba(0,229,255,0.06);--cybdr:rgba(0,229,255,0.18);
+  --gd:#FFB800;--gddim:rgba(255,184,0,0.07);--gdbdr:rgba(255,184,0,0.22);
+  --lm:#39FF14;--lmdim:rgba(57,255,20,0.06);--lmbdr:rgba(57,255,20,0.18);
+  --rd:#FF3B5C;--rdim:rgba(255,59,92,0.07);--rbdr:rgba(255,59,92,0.2);
+  --am:#FF8C00;--adim:rgba(255,140,0,0.07);--abdr:rgba(255,140,0,0.2);
+  --t1:#D4E0EA;--t2:#6A8499;--t3:#2E4459;--t4:#162333;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;--disp:'Bebas Neue',sans-serif;
+  --nav:52px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--t1);font-family:var(--mono);min-height:100vh;overflow-x:hidden;}
+.atm{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,229,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.012) 1px,transparent 1px);
+  background-size:48px 48px;}
+.app{position:relative;z-index:1;max-width:520px;margin:0 auto;padding-bottom:calc(var(--nav)+16px);}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:var(--nav);background:rgba(3,6,10,.96);border-bottom:1px solid var(--b1);backdrop-filter:blur(12px);}
+.logo{font-family:var(--disp);font-size:20px;letter-spacing:3px;color:var(--cy);}
+.logo-sub{font-size:6px;letter-spacing:3px;text-transform:uppercase;color:var(--t3);}
+.top-r{display:flex;align-items:center;gap:8px;}
+.clk{font-family:var(--disp);font-size:16px;color:var(--t3);letter-spacing:2px;}
+.ib{background:transparent;border:1px solid var(--b2);border-radius:5px;padding:5px 9px;color:var(--t2);font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .12s;}
+.ib:hover{border-color:var(--cybdr);color:var(--cy);}
+
+/* PILLS */
+.pills{display:flex;gap:5px;padding:8px 14px 0;overflow-x:auto;scrollbar-width:none;}
+.pills::-webkit-scrollbar{display:none;}
+.pill{display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--bg2);border:1px solid var(--b2);border-radius:20px;font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);white-space:nowrap;flex-shrink:0;}
+.pill .dot{width:5px;height:5px;border-radius:50%;background:var(--t4);flex-shrink:0;}
+.dot.live{background:var(--cy)!important;animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;z-index:100;display:flex;background:rgba(6,11,16,.98);border-top:1px solid var(--b2);backdrop-filter:blur(16px);}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px;cursor:pointer;border:none;background:transparent;color:var(--t3);transition:color .12s;min-height:var(--nav);position:relative;}
+.nb.active{color:var(--cy);}
+.nb .ni{font-size:15px;line-height:1;}
+.nb .nl{font-size:6px;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);}
+.nbi{position:absolute;top:0;left:50%;transform:translateX(-50%);width:18px;height:2px;background:var(--cy);border-radius:0 0 2px 2px;opacity:0;}
+.nb.active .nbi{opacity:1;}
+
+/* PANELS */
+.panel{display:none;padding:12px 14px;animation:fi .18s ease;}
+.panel.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.ph{margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;}
+.pt{font-family:var(--disp);font-size:26px;letter-spacing:2px;color:#fff;line-height:1;}
+.pt span{color:var(--cy);}
+.ps{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-top:3px;}
+
+/* CARDS */
+.card{background:var(--bg1);border:1px solid var(--b1);border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.ct{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:var(--cy);font-weight:600;margin-bottom:10px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 13px;border-radius:5px;border:1px solid;cursor:pointer;font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;transition:all .12s;white-space:nowrap;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-full{width:100%;}
+.btn-cy{background:var(--cy);border-color:var(--cy);color:var(--bg);}
+.btn-cy:hover:not(:disabled){background:#00c9e0;}
+.btn-gd{background:var(--gd);border-color:var(--gd);color:var(--bg);}
+.btn-lm{background:var(--lm);border-color:var(--lm);color:var(--bg);}
+.btn-gh{background:transparent;border-color:var(--b3);color:var(--t2);}
+.btn-gh:hover:not(:disabled){border-color:var(--cybdr);color:var(--cy);}
+.btn-sm{padding:5px 10px;font-size:8px;}
+.btn-rd{background:transparent;border-color:var(--rbdr);color:var(--rd);}
+
+/* FIELDS */
+.field{background:var(--bg);border:1px solid var(--b2);border-radius:5px;padding:9px 12px;font-family:var(--mono);font-size:12px;color:var(--t1);outline:none;transition:border-color .15s;width:100%;}
+.field:focus{border-color:var(--cy);}
+.field::placeholder{color:var(--t4);}
+.fsel{appearance:none;cursor:pointer;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%232E4459'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+.fl{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:5px;}
+
+/* MARKET LIST ITEMS */
+.mkt-item{padding:10px 0;border-bottom:1px solid var(--b1);cursor:pointer;}
+.mkt-item:last-child{border-bottom:none;}
+.mkt-q{font-size:11px;color:var(--t1);line-height:1.5;font-family:var(--sans);margin-bottom:6px;}
+.mkt-odds{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.odds-bar{flex:1;height:5px;background:var(--b2);border-radius:3px;overflow:hidden;}
+.odds-yes{height:100%;background:var(--lm);border-radius:3px;transition:width .3s;}
+.odds-no{height:100%;background:var(--rd);border-radius:3px;transition:width .3s;}
+.odds-label{font-size:9px;font-weight:700;font-family:var(--mono);}
+.odds-label.yes{color:var(--lm);}
+.odds-label.no{color:var(--rd);}
+.mkt-meta{display:flex;gap:8px;font-size:8px;color:var(--t3);flex-wrap:wrap;align-items:center;}
+.res-score{font-size:8px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;display:inline-block;}
+.rs-1,.rs-2{background:var(--lmdim);color:var(--lm);border:1px solid var(--lmbdr);}
+.rs-3{background:var(--adim);color:var(--am);border:1px solid var(--abdr);}
+.rs-4,.rs-5{background:var(--rdim);color:var(--rd);border:1px solid var(--rbdr);}
+.edge-badge{font-size:7px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;display:inline-block;}
+.edge-strong{background:var(--lmdim);color:var(--lm);border:1px solid var(--lmbdr);}
+.edge-moderate{background:var(--gddim);color:var(--gd);border:1px solid var(--gdbdr);}
+.edge-none{background:var(--bg3);color:var(--t3);border:1px solid var(--b3);}
+
+/* BET LOG */
+.bet-item{padding:12px 0;border-bottom:1px solid var(--b1);}
+.bet-item:last-child{border-bottom:none;}
+.bet-q{font-size:10px;color:var(--t1);line-height:1.5;font-family:var(--sans);margin-bottom:5px;}
+.bet-dir{font-size:12px;font-weight:700;font-family:var(--mono);}
+.bet-dir.yes{color:var(--lm);}
+.bet-dir.no{color:var(--rd);}
+
+/* ANALYSIS OUTPUT */
+.ao{background:var(--bg1);border:1px solid var(--b1);border-radius:8px;overflow:hidden;margin-top:10px;}
+.ao-h{padding:11px 13px;border-bottom:1px solid var(--b1);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;}
+.ao-tk{font-family:var(--sans);font-size:13px;font-weight:600;color:#fff;max-width:70%;}
+.vb{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:4px;font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.vb-sb{background:var(--lmdim);border:1px solid var(--lmbdr);color:var(--lm);}
+.vb-b{background:var(--cydim);border:1px solid var(--cybdr);color:var(--cy);}
+.vb-m{background:var(--gddim);border:1px solid var(--gdbdr);color:var(--gd);}
+.vb-p{background:var(--rdim);border:1px solid var(--rbdr);color:var(--rd);}
+.ao-body{padding:14px;max-height:55vh;overflow-y:auto;font-size:11px;line-height:1.8;font-family:var(--sans);}
+.ao-body h2{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:var(--cy);font-weight:600;margin:13px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--b1);}
+.ao-body h2:first-child{margin-top:0;}
+.ao-body p{color:var(--t1);margin-bottom:5px;}
+.ao-body ul{padding-left:13px;margin-bottom:7px;}
+.ao-body li{color:var(--t2);margin-bottom:2px;}
+.ao-body strong{color:#fff;font-weight:600;}
+.ao-f{padding:8px 12px;border-top:1px solid var(--b1);display:flex;gap:6px;background:var(--bg2);}
+
+/* CHAT */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 185px);min-height:360px;}
+.chat-msgs{flex:1;overflow-y:auto;padding:4px 0 10px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent;}
+.msg{margin-bottom:10px;animation:fi .2s ease;}
+.msg-u{display:flex;justify-content:flex-end;}
+.msg-c{display:flex;justify-content:flex-start;}
+.bbl{max-width:90%;border-radius:10px;padding:9px 12px;font-size:11px;line-height:1.7;font-family:var(--sans);}
+.msg-u .bbl{background:var(--bg3);border:1px solid var(--b3);color:var(--t1);border-bottom-right-radius:3px;}
+.msg-c .bbl{background:var(--bg2);border:1px solid var(--b2);color:var(--t1);border-bottom-left-radius:3px;}
+.msg-c .bbl strong{color:#fff;}
+.msg-c .bbl h3{font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--cy);margin:10px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--b1);}
+.msg-c .bbl h3:first-child{margin-top:0;}
+.msg-c .bbl ul{padding-left:13px;margin:3px 0;}
+.msg-c .bbl li{margin-bottom:2px;color:var(--t2);}
+.msg-meta{font-size:7px;color:var(--t4);margin-top:3px;}
+.msg-u .msg-meta{text-align:right;}
+.typing{display:flex;align-items:center;gap:4px;padding:9px 12px;background:var(--bg2);border:1px solid var(--b2);border-radius:10px;border-bottom-left-radius:3px;width:fit-content;}
+.td{width:5px;height:5px;border-radius:50%;background:var(--t3);animation:tda 1.2s ease-in-out infinite;}
+.td:nth-child(2){animation-delay:.2s;}
+.td:nth-child(3){animation-delay:.4s;}
+@keyframes tda{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.ci-wrap{padding-top:10px;border-top:1px solid var(--b1);}
+.ci-row{display:flex;gap:7px;align-items:flex-end;}
+.ci{background:var(--bg2);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;font-family:var(--sans);font-size:12px;color:var(--t1);outline:none;resize:none;min-height:42px;max-height:110px;flex:1;line-height:1.5;transition:border-color .15s;}
+.ci:focus{border-color:var(--cy);}
+.ci::placeholder{color:var(--t4);}
+.cs{background:var(--cy);border:none;border-radius:8px;padding:9px 13px;color:var(--bg);cursor:pointer;font-size:14px;transition:background .12s;flex-shrink:0;height:42px;}
+.cs:hover{background:#00c9e0;}
+.cs:disabled{opacity:.35;cursor:not-allowed;}
+
+/* PASTE */
+.pb{background:var(--bg);border:1px solid var(--b2);border-radius:6px;padding:10px 12px;font-family:var(--sans);font-size:11px;color:var(--t1);outline:none;width:100%;resize:vertical;min-height:110px;line-height:1.65;transition:border-color .15s;}
+.pb:focus{border-color:var(--cy);}
+.pb::placeholder{color:var(--t4);}
+
+/* RESEARCH THREAD */
+.research-msg{margin-bottom:10px;animation:fi .18s ease;}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(3,6,10,.93);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(4px);}
+.modal-ov.hidden{display:none;}
+.modal{background:var(--bg2);border:1px solid var(--b3);border-radius:14px 14px 0 0;padding:18px 16px 34px;width:100%;max-height:85vh;overflow-y:auto;}
+.mh{width:28px;height:3px;background:var(--b3);border-radius:2px;margin:0 auto 16px;}
+.mt{font-family:var(--disp);font-size:22px;letter-spacing:2px;color:#fff;margin-bottom:3px;}
+.ms{font-size:7px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+.mg{margin-bottom:14px;}
+.mkl{font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:var(--t2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.mkl a{color:var(--cy);text-decoration:none;font-size:7px;}
+.mhint{font-size:8px;color:var(--t3);margin-top:3px;line-height:1.5;}
+
+/* UTILS */
+.loading{display:flex;align-items:center;gap:8px;padding:12px 0;color:var(--t3);font-size:10px;}
+.spin{width:14px;height:14px;border:2px solid var(--b3);border-top-color:var(--cy);border-radius:50%;animation:spin .75s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:28px 14px;color:var(--t4);font-size:8px;letter-spacing:2px;text-transform:uppercase;}
+.ei{font-size:22px;margin-bottom:7px;opacity:.3;}
+.err{background:var(--rdim);border:1px solid var(--rbdr);border-radius:5px;padding:9px 12px;font-size:10px;color:var(--rd);margin-top:7px;line-height:1.6;}
+.toast{position:fixed;bottom:calc(var(--nav)+12px);left:50%;transform:translateX(-50%) translateY(8px);z-index:900;background:var(--bg3);border:1px solid var(--cybdr);border-radius:20px;padding:7px 16px;font-size:9px;color:var(--cy);letter-spacing:1px;opacity:0;transition:all .22s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.warn{border-color:var(--abdr);color:var(--am);}
+.toast.err{border-color:var(--rbdr);color:var(--rd);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px;}
+
+/* PROMPT DISPLAY */
+.prompt-pre{background:var(--bg);border:1px solid var(--b2);border-radius:6px;padding:12px 14px;font-size:10px;line-height:1.8;color:var(--t2);white-space:pre-wrap;max-height:320px;overflow-y:auto;font-family:var(--mono);}
+
+/* BET PLACED / PAPER / PASS verdict buttons */
+.verdict-actions{display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--b1);background:var(--bg2);flex-wrap:wrap;}
+.btn-placed{background:var(--lm);border-color:var(--lm);color:var(--bg);font-weight:800;}
+.btn-placed:hover:not(:disabled){background:#2de010;}
+.btn-paper{background:transparent;border-color:var(--gd);color:var(--gd);}
+.btn-paper:hover:not(:disabled){background:var(--gddim);}
+.btn-pass{background:transparent;border-color:var(--b3);color:var(--t3);}
+.btn-pass:hover:not(:disabled){border-color:var(--rbdr);color:var(--rd);}
+
+/* Mode toggle in bet modal */
+.mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--b2);border-radius:5px;overflow:hidden;margin-bottom:14px;}
+.mode-btn{padding:10px;text-align:center;cursor:pointer;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);border:none;transition:all .12s;}
+.mode-btn.real{background:var(--lm);color:var(--bg);}
+.mode-btn.paper{background:var(--gddim);color:var(--gd);border-left:1px solid var(--b2);}
+.mode-btn.inactive{background:var(--bg2);color:var(--t4);}
+
+/* Resolve modal */
+.resolve-sheet{background:var(--bg2);border:1px solid var(--b3);border-radius:14px 14px 0 0;padding:18px 16px 34px;width:100%;max-height:85vh;overflow-y:auto;}
+
+/* Coaching session */
+.coaching-msg{margin-bottom:10px;}
+.coaching-q{background:var(--cydim);border:1px solid var(--cybdr);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--cy);line-height:1.7;font-family:var(--sans);margin-bottom:6px;}
+.coaching-a{background:var(--bg);border:1px solid var(--b2);border-radius:5px;padding:8px 12px;font-family:var(--sans);font-size:11px;color:var(--t1);outline:none;width:100%;transition:border-color .15s;resize:vertical;min-height:60px;}
+.coaching-a:focus{border-color:var(--cy);}
+
+/* RESOLUTION SCALE */
+.rs-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--b1);}
+.rs-row:last-child{border-bottom:none;}
+.rs-num{font-family:var(--disp);font-size:20px;width:24px;text-align:center;flex-shrink:0;}
+.rs-label{font-size:10px;font-weight:600;font-family:var(--mono);width:130px;flex-shrink:0;}
+.rs-desc{font-size:9px;color:var(--t3);line-height:1.5;font-family:var(--sans);}
+
+/* BET MODAL */
+.bet-modal{background:var(--bg2);border:1px solid var(--b3);border-radius:14px 14px 0 0;padding:18px 16px 34px;width:100%;max-height:90vh;overflow-y:auto;}
+</style>
+</head>
+<body>
+<div class="atm"></div>
+<div class="app">
+
+<div class="topbar">
+  <div><div class="logo">PIT</div><div class="logo-sub">Polymarket Intelligence Terminal</div></div>
+  <div class="top-r">
+    <div class="clk" id="clk">--:--</div>
+    <button class="ib" onclick="openModal()">⚙ Keys</button>
+  </div>
+</div>
+
+<div class="pills">
+  <div class="pill"><div class="dot" id="dCl"></div><span id="lCl">Claude</span></div>
+  <div class="pill"><div class="dot" id="dSb"></div><span id="lSb">Supabase</span></div>
+  <div class="pill"><div class="dot" id="dTg"></div><span id="lTg">Telegram</span></div>
+  <div class="pill"><div class="dot live" style="background:var(--gd)!important;animation:none;"></div><span>£20–50 Learning</span></div><div class="pill"><div class="dot live"></div><span>Web Search ON</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PANEL: SCAN — Paste signal, find markets
+═══════════════════════════════════════ -->
+<div class="panel active" id="panel-scan">
+<div style="padding-top:12px;">
+  <div class="ph">
+    <div><div class="pt">SIGNAL <span>SCAN</span></div><div class="ps">Paste news · Claude finds Polymarket opportunities</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">01 — Paste Signal or News</div>
+    <textarea class="pb" id="scanIn" placeholder="Paste anything:
+• A breaking news headline
+• A Telegram geopolitical alert
+• An FT or Reuters article
+• A government announcement
+• A ceasefire rumour
+• Your own observation
+
+Claude will:
+1. Parse first/second/third-order effects
+2. Find relevant Polymarket markets
+3. Score resolution risk on each
+4. Generate a Gemini Research Brief for the best 2-3"></textarea>
+    <div style="display:flex;gap:7px;margin-top:8px;">
+      <button class="btn btn-cy" style="flex:1;" id="btnScan" onclick="runScan()">◎ SCAN FOR MARKETS</button>
+      <button class="btn btn-gh btn-sm" onclick="clearScan()">CLEAR</button>
+    </div>
+  </div>
+
+  <!-- Research thread -->
+  <div id="scanQs" style="display:none;">
+    <div class="card">
+      <div class="ct">02 — Research Session</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;line-height:1.6;font-family:var(--sans);">Copy the Gemini brief → paste into Gemini 2.0 Pro (grounding on) → paste Gemini's response back here → tap GET VERDICT</div>
+      <div id="scanThread" style="margin-bottom:10px;"></div>
+      <div style="background:var(--bg);border:1px solid var(--b2);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+        <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--cy);margin-bottom:6px;">Gemini data / your context / follow-up</div>
+        <textarea class="pb" id="scanResInput" placeholder="Paste Gemini's research output here, or add your own context..." rows="4" style="min-height:80px;margin-bottom:8px;"></textarea>
+        <div style="display:flex;gap:7px;">
+          <button class="btn btn-cy" style="flex:1;" id="btnSendScan" onclick="sendScanResearch()">↑ SEND</button>
+          <button class="btn btn-gd btn-sm" onclick="getScanVerdict()" id="btnScanVerdict">⚡ GET VERDICT</button>
+        </div>
+      </div>
+      <div style="font-size:8px;color:var(--t3);text-align:center;">Chat with Claude · add data · tap GET VERDICT when ready</div>
+    </div>
+  </div>
+
+  <div class="loading" id="scanLoad" style="display:none;"><div class="spin"></div><span id="scanLoadT">Parsing signal...</span></div>
+  <div id="scanOut"></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PANEL: ANALYSE — Deep-dive a specific market
+═══════════════════════════════════════ -->
+<div class="panel" id="panel-analyse">
+<div style="padding-top:12px;">
+  <div class="ph"><div><div class="pt">ANALYSE <span>MARKET</span></div><div class="ps">Gemini data → probability → bet decision</div></div></div>
+
+  <div class="card">
+    <div class="ct">Market Setup</div>
+    <label class="fl">Polymarket question (paste exactly)</label>
+    <textarea class="field" id="mktQ" rows="3" style="min-height:65px;resize:vertical;font-size:11px;line-height:1.6;margin-bottom:8px;" placeholder="e.g. Will the Strait of Hormuz reopen to Western shipping before June 1, 2026?
+
+Tip: Claude will search polymarket.com for current odds automatically — you can leave the odds field blank."></textarea>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <label class="fl">Current YES odds (%)</label>
+        <input type="number" class="field" id="mktYes" placeholder="e.g. 34" min="1" max="99" step="1">
+      </div>
+      <div>
+        <label class="fl">Resolution date</label>
+        <input type="date" class="field" id="mktDate">
+      </div>
+    </div>
+
+    <label class="fl">Why are you looking? (signal that caught your eye)</label>
+    <textarea class="field" id="mktWhy" rows="2" style="min-height:50px;resize:vertical;font-size:11px;line-height:1.6;margin-bottom:8px;" placeholder="e.g. Hormuz crisis deepening, Iran rejected latest US proposal, saw odds haven't moved..."></textarea>
+
+    <label class="fl">Extra context (optional — Claude searches live automatically)</label>
+    <textarea class="pb" id="mktGemini" placeholder="Paste Gemini's full research output here.
+
+If you haven't run Gemini yet:
+1. Go to SCAN tab → paste the news signal
+2. Copy the Gemini brief Claude generates
+3. Paste into Gemini 2.0 Pro (grounding enabled)
+4. Copy Gemini's response back here" style="min-height:120px;margin-bottom:8px;"></textarea>
+
+    <button class="btn btn-lm btn-full" id="btnAnalyse" onclick="runAnalysis()">⚡ RUN FULL ANALYSIS</button>
+  </div>
+
+  <div class="loading" id="analyseLoad" style="display:none;"><div class="spin"></div><span id="analyseLT">Auditing research...</span></div>
+  <div id="analyseOut"></div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PANEL: CHAT — Ask anything
+═══════════════════════════════════════ -->
+<div class="panel" id="panel-chat">
+<div style="padding-top:12px;">
+  <div class="ph">
+    <div><div class="pt">MARKET <span>ANALYST</span></div><div class="ps">Prediction market strategy · Full context</div></div>
+    <button class="btn btn-gh btn-sm" onclick="clearChat()">CLEAR</button>
+  </div>
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="msg msg-c"><div>
+        <div class="bbl"><strong>PIT Analyst online.</strong><br><br>
+        Prediction market strategy loaded — signal-to-bet pipeline, resolution risk framework, edge theory, £20–50 learning phase rules.<br><br>
+        Paste a headline, ask about a market, or describe a signal. I'll help you find and size the edge.</div>
+        <div class="msg-meta">PIT Analyst · Ready</div>
+      </div></div>
+    </div>
+    <div class="ci-wrap">
+      <div style="display:flex;gap:5px;margin-bottom:7px;flex-wrap:wrap;">
+        <button class="btn btn-gh btn-sm" onclick="qk('What Polymarket markets does the Hormuz crisis affect that might be mispriced?')">Hormuz markets?</button>
+        <button class="btn btn-gh btn-sm" onclick="qk('Explain how to spot a slow update edge on Polymarket')">Slow update edge?</button>
+        <button class="btn btn-gh btn-sm" onclick="qk('What resolution risks should I always check before betting?')">Resolution risks?</button>
+      </div>
+      <div class="ci-row">
+        <textarea class="ci" id="ciIn" placeholder="Ask anything about prediction markets..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+          oninput="ar(this)"></textarea>
+        <button class="cs" id="cSend" onclick="sendChat()">↑</button>
+      </div>
+      <div style="font-size:7px;color:var(--t4);margin-top:3px;">Enter to send · Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PANEL: BETS — Bet log & tracker
+═══════════════════════════════════════ -->
+<div class="panel" id="panel-bets">
+<div style="padding-top:12px;">
+  <div class="ph">
+    <div><div class="pt">BET <span>LOG</span></div><div class="ps">Track bets · Record edge · Build track record</div></div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-gh btn-sm" onclick="openCoach()">⚡ COACH</button>
+      <button class="btn btn-cy btn-sm" onclick="openAddBet()">+ LOG BET</button>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;margin-bottom:12px;background:var(--b1);">
+    <div style="background:var(--bg1);padding:10px 12px;">
+      <div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Bets</div>
+      <div style="font-family:var(--disp);font-size:20px;color:#fff;" id="statTotal">0</div>
+    </div>
+    <div style="background:var(--bg1);padding:10px 12px;">
+      <div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Win %</div>
+      <div style="font-family:var(--disp);font-size:20px;color:var(--cy);" id="statWin">—</div>
+    </div>
+    <div style="background:var(--bg1);padding:10px 12px;">
+      <div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">P&L</div>
+      <div style="font-family:var(--disp);font-size:20px;" id="statPnl">£0</div>
+    </div>
+    <div style="background:var(--bg1);padding:10px 12px;">
+      <div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Avg Edge</div>
+      <div style="font-family:var(--disp);font-size:20px;color:var(--gd);" id="statEdge">—</div>
+      <div style="font-size:6px;color:var(--t4);margin-top:1px;" id="statCalibProgress"></div>
+    </div>
+  </div>
+
+  <!-- Calibration tracker -->
+  <div class="card" id="calibCard" style="display:none;">
+    <div class="ct">Calibration by Market Type</div>
+    <div id="calibData"></div>
+    <div style="margin-top:10px;padding:9px 12px;background:var(--bg);border:1px solid var(--b2);border-radius:5px;font-size:9px;color:var(--t3);line-height:1.7;font-family:var(--sans);">
+      <strong style="color:var(--cy);">How to read this:</strong> When you say 70%, you should win ~70% of the time. If you're winning more, shade estimates up. If less, shade down. This is how you build calibration.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Open Bets</div>
+    <div id="openBets"><div class="empty"><div class="ei">◎</div>No open bets — tap + LOG BET</div></div>
+  </div>
+  <div class="card">
+    <div class="ct">Closed Bets — Track Record</div>
+    <div id="closedBets"><div class="empty"><div class="ei">▲</div>No closed bets yet</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PANEL: PROMPTS — Reference & copy
+═══════════════════════════════════════ -->
+<div class="panel" id="panel-prompts">
+<div style="padding-top:12px;">
+  <div class="ph"><div><div class="pt">PROMPT <span>LIBRARY</span></div><div class="ps">3-step framework · Copy & use</div></div></div>
+
+  <!-- Workflow -->
+  <div class="card">
+    <div class="ct">3-Step Workflow</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="font-size:9px;color:var(--cy);font-family:var(--mono);min-width:24px;padding-top:1px;">S01</div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--cy);margin-bottom:2px;font-family:var(--mono);">SCAN FOR MARKETS</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Paste signal → Claude parses first/second/third-order effects → identifies relevant markets → scores resolution risk → generates Gemini brief</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="font-size:9px;color:var(--gd);font-family:var(--mono);min-width:24px;padding-top:1px;">S02</div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--gd);margin-bottom:2px;font-family:var(--mono);">GEMINI RESEARCHES</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Copy brief → Gemini 2.0 Pro (grounding on) → pulls live odds, primary sources, base rates, decision-maker positions, resolution criteria</div></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="font-size:9px;color:var(--lm);font-family:var(--mono);min-width:24px;padding-top:1px;">S03</div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--lm);margin-bottom:2px;font-family:var(--mono);">ANALYSE A MARKET</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Paste Gemini output → full probability analysis → edge calculation → resolution risk score → stake recommendation → monitoring plan</div></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);font-size:9px;color:var(--t3);line-height:1.9;font-family:var(--mono);">
+      <span style="color:var(--cy);">Claude</span> = strategy brain &amp; analysis &nbsp;·&nbsp;
+      <span style="color:var(--gd);">Gemini</span> = live research engine &nbsp;·&nbsp;
+      <span style="color:var(--lm);">You</span> = signal source &amp; final decision
+    </div>
+  </div>
+
+  <!-- Prompt tabs -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;" id="promptTabs">
+    <button onclick="showPrompt('scan')" id="ptab-scan" class="btn btn-cy btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
+      <span style="font-size:14px;">◎</span><span>SCAN</span>
+    </button>
+    <button onclick="showPrompt('gemini')" id="ptab-gemini" class="btn btn-gh btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
+      <span style="font-size:14px;">◈</span><span>GEMINI</span>
+    </button>
+    <button onclick="showPrompt('analyse')" id="ptab-analyse" class="btn btn-gh btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
+      <span style="font-size:14px;">⚡</span><span>ANALYSE</span>
+    </button>
+  </div>
+
+  <div class="card" id="promptCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="ct" style="margin-bottom:0;" id="promptCardTitle">◎ SCAN FOR MARKETS</div>
+      <button class="btn btn-gh btn-sm" id="btnCopyPrompt" onclick="copyActivePrompt()">⎘ COPY</button>
+    </div>
+    <div class="prompt-pre" id="promptText"></div>
+  </div>
+
+  <!-- Reference: Resolution risk -->
+  <div class="card">
+    <div class="ct">Resolution Risk Scale — Check Every Market</div>
+    <div id="resScaleList"></div>
+    <div style="margin-top:10px;padding:9px 12px;background:var(--rdim);border:1px solid var(--rbdr);border-radius:5px;font-size:9px;color:var(--rd);line-height:1.7;">
+      Score 4 or 5 = automatic PASS. Research the exact resolution criteria on polymarket.com BEFORE running analysis.
+    </div>
+  </div>
+
+  <!-- Reference: Edge types -->
+  <div class="card">
+    <div class="ct">4 Edge Types</div>
+    <div style="display:flex;flex-direction:column;gap:0;" id="edgeTypeList"></div>
+  </div>
+
+  <!-- Reference: Stake sizing -->
+  <div class="card">
+    <div class="ct">Stake Sizing — Learning Phase</div>
+    <div style="font-size:9px;color:var(--t3);margin-bottom:8px;line-height:1.6;">Never exceed £50 per bet until you have 20+ bets of track record.</div>
+    <div id="stakeTierList"></div>
+  </div>
+
+  <!-- Non-negotiable rules -->
+  <div class="card">
+    <div class="ct">Non-Negotiable Rules</div>
+    <div id="rulesList"></div>
+  </div>
+
+  <!-- Scanner stack -->
+  <div class="card">
+    <div class="ct">Free News Scanner Stack</div>
+    <div id="scannerList"></div>
+  </div>
+</div>
+</div>
+
+</div><!-- end .app -->
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="nb active" onclick="nav('scan')" id="nav-scan"><div class="nbi"></div><div class="ni">◎</div><div class="nl">Scan</div></button>
+  <button class="nb" onclick="nav('analyse')" id="nav-analyse"><div class="nbi"></div><div class="ni">⚡</div><div class="nl">Analyse</div></button>
+  <button class="nb" onclick="nav('chat')" id="nav-chat"><div class="nbi"></div><div class="ni">💬</div><div class="nl">Chat</div></button>
+  <button class="nb" onclick="nav('bets')" id="nav-bets"><div class="nbi"></div><div class="ni">📊</div><div class="nl">Bets</div></button>
+  <button class="nb" onclick="nav('prompts')" id="nav-prompts"><div class="nbi"></div><div class="ni">◈</div><div class="nl">Prompts</div></button>
+</div>
+
+<!-- KEYS MODAL -->
+<div class="modal-ov hidden" id="mOv" onclick="cmOut(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt">API KEYS</div>
+    <div class="ms">Stored locally · Never transmitted to anyone</div>
+    <div class="mg"><div class="mkl">Anthropic (Claude) <a href="https://console.anthropic.com" target="_blank">↗ Get key</a></div>
+      <input type="password" class="field" id="kAnt" placeholder="sk-ant-api03-...">
+      <div class="mhint">Powers all AI analysis. Required for all features.</div></div>
+    <div class="mg"><div class="mkl">Supabase URL <a href="https://supabase.com" target="_blank">↗ Dashboard</a></div>
+      <input type="text" class="field" id="kSbU" placeholder="https://xxxx.supabase.co">
+      <div class="mhint">Required for AI memory. Run the SQL schema in your Supabase SQL editor first.</div></div>
+    <div class="mg"><div class="mkl">Supabase Anon Key</div>
+      <input type="password" class="field" id="kSbK" placeholder="eyJ..."></div>
+    <div class="mg"><div class="mkl">Telegram Bot Token <a href="https://t.me/BotFather" target="_blank">↗ BotFather</a></div>
+      <input type="password" class="field" id="kTgT" placeholder="7743291847:AAFxxxxxxx">
+      <div class="mhint">Optional — for bet alerts and verdict notifications.</div></div>
+    <div class="mg"><div class="mkl">Telegram Chat ID</div>
+      <input type="text" class="field" id="kTgC" placeholder="8148874257"></div>
+    <button class="btn btn-cy btn-full" onclick="saveK()" style="margin-top:8px;">SAVE ALL KEYS</button>
+    <button class="btn btn-gh btn-full" onclick="cm()" style="margin-top:7px;">CANCEL</button>
+  </div>
+</div>
+
+<!-- ADD BET MODAL -->
+<div class="modal-ov hidden" id="betOv" onclick="if(event.target===this)closeBetModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt" id="betModalTitle">BET PLACED</div>
+    <div class="ms" id="betModalSub">Real money · Trains the AI · Builds calibration</div>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn real" id="modeBtnReal" onclick="setBetMode('real')">✓ REAL BET</button>
+      <button class="mode-btn paper inactive" id="modeBtnPaper" onclick="setBetMode('paper')">◎ PAPER TRADE</button>
+    </div>
+    <div id="modeNote" style="font-size:9px;color:var(--lm);margin-bottom:12px;font-family:var(--sans);line-height:1.6;">Real bet — outcome trains the AI. Only log this if you actually placed money.</div>
+
+    <div class="mg">
+      <div class="mkl">Market question</div>
+      <textarea class="field" id="bet_q" rows="2" style="min-height:50px;resize:vertical;font-size:11px;" placeholder="e.g. Hormuz reopen before June 1?"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="mg">
+      <div>
+        <div class="mkl">Direction</div>
+        <select class="field fsel" id="bet_dir">
+          <option value="YES">YES</option>
+          <option value="NO">NO</option>
+        </select>
+      </div>
+      <div>
+        <div class="mkl">Stake (£)</div>
+        <select class="field fsel" id="bet_stake">
+          <option value="20">£20 — Marginal</option>
+          <option value="30" selected>£30 — BET</option>
+          <option value="50">£50 — Strong Bet</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="mg">
+      <div>
+        <div class="mkl">Market odds YES (%)</div>
+        <input type="number" class="field" id="bet_mktOdds" placeholder="e.g. 34" min="1" max="99">
+      </div>
+      <div>
+        <div class="mkl">Your true P(YES) (%)</div>
+        <input type="number" class="field" id="bet_myOdds" placeholder="e.g. 52" min="1" max="99">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="mg">
+      <div>
+        <div class="mkl">Market type</div>
+        <select class="field fsel" id="bet_mktType">
+          <option value="geo">Geopolitical breaking news</option>
+          <option value="tech">Tech &amp; AI corporate event</option>
+          <option value="second">Second-order geopolitical</option>
+        </select>
+      </div>
+      <div>
+        <div class="mkl">Resolution risk (1–5)</div>
+        <select class="field fsel" id="bet_resRisk">
+          <option value="1">1 — Crystal clear</option>
+          <option value="2" selected>2 — Mostly clear</option>
+          <option value="3">3 — Some ambiguity</option>
+          <option value="4">4 — Risky</option>
+          <option value="5">5 — AVOID</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="mg">
+      <div>
+        <div class="mkl">Date placed</div>
+        <input type="date" class="field" id="bet_date">
+      </div>
+      <div>
+        <div class="mkl">Resolution date</div>
+        <input type="date" class="field" id="bet_resDate">
+      </div>
+    </div>
+    <div class="mg">
+      <div class="mkl">Edge in one sentence</div>
+      <input type="text" class="field" id="bet_edge" placeholder="e.g. Market hasn't updated since Iran rejected proposal 6h ago">
+    </div>
+    <div class="mg">
+      <div class="mkl">Exit trigger</div>
+      <input type="text" class="field" id="bet_exit" placeholder="e.g. Ceasefire announced → close YES immediately">
+    </div>
+    <button class="btn btn-lm btn-full" id="betSaveBtn" onclick="saveBet()" style="margin-top:4px;">✓ SAVE BET</button>
+    <button class="btn btn-gh btn-full" onclick="closeBetModal()" style="margin-top:7px;">CANCEL</button>
+  </div>
+</div>
+
+<!-- RESOLVE MODAL -->
+<div class="modal-ov hidden" id="resolveOv" onclick="if(event.target===this)closeResolveModal()">
+  <div class="resolve-sheet" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt">RESOLVE BET</div>
+    <div class="ms" id="resolveQ" style="color:var(--t2);font-size:9px;max-width:100%;white-space:normal;"></div>
+    <input type="hidden" id="resolveId">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-lm btn-full" onclick="setResolution('YES')" id="resYesBtn" style="padding:14px;font-size:12px;">✓ RESOLVED YES</button>
+      <button class="btn btn-rd btn-full" onclick="setResolution('NO')" id="resNoBtn" style="padding:14px;font-size:12px;">✗ RESOLVED NO</button>
+    </div>
+
+    <div class="mg">
+      <div class="mkl">Actual P&L (£) — leave 0 for paper trades</div>
+      <input type="number" class="field" id="resolve_pnl" placeholder="e.g. 28" step="1">
+    </div>
+    <div class="mg">
+      <div class="mkl">Did the thesis hold? (why it resolved this way)</div>
+      <textarea class="field" id="resolve_notes" rows="3" style="min-height:65px;resize:vertical;font-size:11px;line-height:1.6;" placeholder="e.g. Iran accepted Omani proposal — thesis held exactly as predicted&#10;&#10;OR: Market resolved on technicality — ceasefire announced but strait not officially open yet"></textarea>
+    </div>
+    <div class="mg">
+      <div class="mkl">Thesis held?</div>
+      <select class="field fsel" id="resolve_thesis">
+        <option value="yes">Yes — resolved as predicted</option>
+        <option value="partial">Partial — right direction, wrong reasoning</option>
+        <option value="no">No — thesis was wrong</option>
+        <option value="technicality">Resolved on technicality — criteria issue</option>
+      </select>
+    </div>
+    <button class="btn btn-cy btn-full" onclick="saveResolution()" style="margin-top:4px;">◎ SAVE OUTCOME → TRAIN AI</button>
+    <button class="btn btn-gh btn-full" onclick="closeResolveModal()" style="margin-top:7px;">CANCEL</button>
+  </div>
+</div>
+
+<!-- COACHING MODAL -->
+<div class="modal-ov hidden" id="coachOv" onclick="if(event.target===this)closeCoach()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt">AI COACHING</div>
+    <div class="ms">Claude reviews your history · Identifies patterns · Adjusts strategy</div>
+    <div id="coachThread" style="max-height:45vh;overflow-y:auto;margin-bottom:10px;"></div>
+    <div class="loading" id="coachLoad" style="display:none;"><div class="spin"></div><span id="coachLoadT">Loading your history...</span></div>
+    <div style="display:flex;gap:7px;align-items:flex-end;">
+      <textarea class="ci" id="coachInput" placeholder="Respond to Claude's questions..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCoachReply()}"
+        oninput="ar(this)"></textarea>
+      <button class="cs" onclick="sendCoachReply()">↑</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button class="btn btn-gh btn-sm btn-full" onclick="closeCoach()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// KEYS & STATE
+// ═══════════════════════════════════════════════════════
+const K={
+  get ant(){return localStorage.getItem('pit_ant')||'';},
+  get sbU(){return localStorage.getItem('pit_sbU')||'';},
+  get sbK(){return localStorage.getItem('pit_sbK')||'';},
+  get tgt(){return localStorage.getItem('pit_tgt')||'';},
+  get tgc(){return localStorage.getItem('pit_tgc')||'';},
+};
+
+let chatHist=[];
+let scanOrig='', scanResHistory=[];
+let activePromptKey='scan';
+
+// ═══════════════════════════════════════════════════════
+// SYSTEM PROMPT — Full strategy context
+// ═══════════════════════════════════════════════════════
+const SYS=`You are the PIT — Polymarket Intelligence Terminal analyst. You are a probabilistic reasoning specialist and prediction market strategist.
+
+Your role: help identify, research, and analyse Polymarket betting opportunities using a signal-driven, second-order thinking approach.
+
+═══ CORE STRATEGY ═══
+Edge theory: Polymarket misprice in three ways:
+1. SLOW UPDATE — market hasn't processed new information (last 24–72 hours). Edge closes in hours.
+2. SECOND-ORDER — market priced the obvious first-order outcome but missed the consequence. Edge closes in days.
+3. BASE RATE ANCHOR — market anchored to historical prior, ignoring current signals. Edge closes in days/weeks.
+4. INFORMATION LAG — you accessed primary sources or expert analysis most participants haven't found. Most durable edge.
+
+═══ RESOLUTION RISK — EVALUATED BEFORE EVERYTHING ELSE ═══
+Score 1–5. Never bet on a score 4 or 5 regardless of edge size.
+1 = Crystal clear. Objective, verifiable, no ambiguity.
+2 = Mostly clear. Minor edge cases unlikely to matter.
+3 = Some ambiguity. Specific technicality risk — research carefully.
+4 = Significant risk. Could resolve unexpectedly.
+5 = Avoid. Subjective judgment or controversial resolution precedent.
+
+The resolution criteria must be confirmed BEFORE probability analysis begins.
+
+═══ STAKE SIZING — LEARNING PHASE ═══
+Maximum £50 per bet. Do not exceed this under any circumstances.
+STRONG BET (edge ≥7pp, confidence High, resolution risk ≤2): £50
+BET (edge ≥3pp, confidence Medium+, resolution risk ≤3): £30
+MARGINAL (edge exists, any concern): £20
+PASS (edge <3pp, confidence Low, OR resolution risk ≥4): £0
+HARD PASS (resolution risk 5, or evidence strongly against): £0
+
+═══ THREE-QUESTION BET GATE ═══
+All three must be answered YES before placing:
+1. Is edge ≥ 3 percentage points? (Your P(YES) vs market odds differ by ≥3pp)
+2. Is resolution risk ≤ 3? (Criteria clear enough the right outcome wins)
+3. Can the edge be explained in one sentence? (If not, it's a feeling, not an edge)
+
+═══ SIGNAL TYPES ═══
+GEOPOLITICAL: Wars, ceasefires, sanctions, diplomatic events. Speed: hours. Second-order effects take days to price.
+POLITICAL: Elections, policy decisions, government actions. Speed: day. Often anchored to base rates, ignoring current signals.
+TECH/CORPORATE: Earnings, product launches, regulatory decisions. Speed: varies. Often slow to update on technical details.
+
+═══ PROBABILITY FRAMEWORK ═══
+When estimating P(YES):
+1. Start with base rate from historical precedent
+2. Adjust for each piece of evidence (direction + weight)
+3. Run scenario analysis: bull/base/bear cases
+4. Give point estimate + confidence interval
+5. State the single most important piece of evidence
+
+Edge = P(YES)_true − P(YES)_market (if betting YES)
+Edge = P(NO)_true − P(NO)_market (if betting NO = 1 − P(YES)_market − P(NO)_true)
+
+Edge interpretation:
+<3pp: No meaningful edge → PASS
+3–7pp: Moderate edge → viable at learning stakes
+7–15pp: Strong edge → good bet
+>15pp: Re-check everything — either you are right or you are missing something
+
+═══ GEMINI DIVISION OF LABOUR ═══
+Gemini with grounding does: live odds, breaking news, official statements, superforecaster data, historical precedents, resolution criteria research.
+Claude does: probability estimation, edge calculation, scenario analysis, bet recommendation.
+Never conflate these roles. Gemini returns facts. Claude makes decisions.
+
+═══ OPERATING RULES ═══
+- Resolution risk BEFORE probability. Always.
+- Edge must be explainable in one sentence. If you can't, it's a guess.
+- Never exceed £50 learning phase cap.
+- Track every bet: odds, your P, edge, outcome. The record is the education.
+- Second-order effects: always ask what the market priced vs what will actually happen.
+- Be honest about confidence intervals — false precision is worse than honest uncertainty.
+- PASS is valid and often correct. Never soften a PASS into a "small speculative bet."
+- After 20 bets with documented positive EV, review sizing.
+
+═══ MACRO CONTEXT (March 2026) ═══
+- Hormuz crisis: US-Israel strikes on Iran. Strait effectively closed. Qatar LNG offline. Brent $70→$126. Iran demanding yuan settlement.
+- Agentic AI: OpenClaw confirmed fastest-growing OS in history. Compute demand 1,000–1,000,000x chatbot baseline.
+- Petrodollar stress: CIPS $245T yuan transactions. Saudi ended exclusive dollar pricing June 2024. Gold is 3–5 year beneficiary.
+- Ceasefire dynamics: Trump negotiating with Iran. Resolution is a trade — keep this in view for relevant markets.`;
+
+// ═══════════════════════════════════════════════════════
+// PROMPTS DATA
+// ═══════════════════════════════════════════════════════
+const PROMPTS={
+  scan:{
+    label:'◎ SCAN FOR MARKETS',
+    color:'var(--cy)',
+    text:`You are a prediction market analyst specialising in Polymarket. You combine geopolitical intelligence, second-order reasoning, and probabilistic thinking to identify where market odds are mispriced relative to true probability.
+
+I will give you a raw signal — a news item, event, or observation. Your job is to:
+1. Identify all relevant Polymarket markets this signal could affect
+2. Score each for edge potential (where are the odds likely wrong?)
+3. Rank by actionability and generate a Gemini Research Brief for the top 2-3 markets
+
+---
+
+## MY CONTEXT
+- Learning phase: £20–50 stakes per bet
+- Signal types: Geopolitical events, Political outcomes, Technology & corporate events
+- Edge theory: Markets misprice by being slow to update, overreacting to first-order news, or anchoring to base rates
+- I want durable edges, not scalping
+
+---
+
+## STEP 1 — PARSE THE SIGNAL
+
+Signal Classification:
+- Type: [Breaking geopolitical / Political development / Tech/corporate event]
+- Speed tier: [Act within hours / Act within a day / Multi-day research]
+- First-order effect: What the market has already priced
+- Second-order effect: What the market hasn't priced yet — where the edge lives
+- Third-order effect: Deeper consequences still invisible to most participants
+
+Information Advantage Assessment:
+- What do most Polymarket participants know about this?
+- What can you find that they don't have yet?
+- How long before this is fully priced?
+
+---
+
+## STEP 2 — IDENTIFY RELEVANT MARKETS
+
+For each relevant Polymarket market:
+
+[Market Title]
+- Current odds: YES: X% / NO: X% (note if unknown — Gemini will find this)
+- Why this signal is relevant: specific connection
+- Direction of mispricing: [YES underpriced / NO underpriced / Unclear]
+- Edge type: [Slow update / Second-order / Base rate anchor / Information lag]
+- Resolution criteria risk: [1=Clean / 2=Mostly clear / 3=Some ambiguity / 4=Risky / 5=Avoid]
+  - Explain any specific resolution risk if score ≥3
+- Time to resolution: [Days / Weeks / Months]
+- Actionability: [🔴 Hours / 🟡 Day / 🟢 Multi-day]
+
+List ALL markets you can identify including adjacent and non-obvious ones.
+
+---
+
+## STEP 3 — EDGE SCORING TABLE
+
+| Market | Direction | Edge Type | Resolution Risk [/5] | Actionability | Priority |
+|--------|-----------|-----------|---------------------|---------------|----------|
+
+Sort by: Resolution Risk first (lower = better), then edge potential.
+
+---
+
+## STEP 4 — GEMINI RESEARCH BRIEF
+
+For the TOP 2-3 markets only. Generate the EXACT Gemini research prompt to copy and paste.
+
+---
+
+### GEMINI BRIEF: [Market Title]
+
+Your task: You are a research analyst gathering raw intelligence for a Polymarket probability assessment. Do NOT give probability estimates — that comes later. Find and return structured factual information only.
+
+The market question: [Exact Polymarket question]
+Current odds: [YES X% / NO X%] — verify first at polymarket.com
+Resolution criteria: [What exactly triggers YES resolution]
+Resolution date: [When does this market close]
+
+Research tasks — complete ALL:
+
+1. CURRENT STATUS
+   - Factual state of affairs regarding this question right now
+   - What happened in the last 48–72 hours that is relevant
+   - Find 3+ primary sources (Reuters, AP, BBC, official statements)
+
+2. BASE RATE RESEARCH
+   - Has a situation like this happened before? What was the outcome?
+   - Historical precedents: [specific precedent to find]
+   - Superforecaster data: Metaculus, Good Judgement Open, Manifold Markets
+
+3. KEY DECISION-MAKERS & INCENTIVES
+   - 2-3 people or institutions whose decisions determine this outcome
+   - Their stated positions as of this week
+   - Their incentive structure — what outcome benefits them most?
+
+4. OPPOSING EVIDENCE
+   - Strongest case for the opposite outcome
+   - 2+ sources supporting the NO case (if researching YES) or vice versa
+   - What would have to be true for the market to resolve against your thesis?
+
+5. RESOLUTION CRITERIA DEEP DIVE
+   - Exact Polymarket resolution criteria for this market
+   - Any ambiguities, technicalities, or edge cases
+   - Has Polymarket resolved similar markets before? How?
+
+6. TIMELINE & CATALYST MAP
+   - Specific events in the next [X days/weeks] that could move this market
+   - Upcoming announcements, negotiations, deadlines that are binary triggers
+
+7. SMART MONEY CHECK
+   - Recent volume spikes on this market (check polymarket.com)
+   - Any evidence of informed participants moving odds recently
+   - Unusual trading patterns
+
+Return format: Structured sections for each task. Facts and sources only. No probability estimates. No betting recommendations.
+
+---
+
+## STEP 5 — STRATEGY BRIEF
+
+One paragraph per top market: given what we know NOW (before Gemini), what is the preliminary thesis? What specifically are we betting the market has wrong?
+
+---
+
+OPERATING RULES:
+- Flag resolution risk on EVERY market — non-negotiable
+- Second-order effects are where the edge lives — always go one level deeper
+- Speed tier determines urgency: geopolitical = hours, policy = day, structural = multi-day
+- Exclude any market with resolution risk ≥4 from the Gemini brief
+- The Gemini brief is a research instrument — factual and specific, not analytical`
+  },
+  gemini:{
+    label:'◈ GEMINI RESEARCH BRIEF',
+    color:'var(--gd)',
+    text:`[THIS PROMPT IS GENERATED DYNAMICALLY]
+
+The Gemini Research Brief is written by Claude specifically for each market in the SCAN FOR MARKETS step.
+
+When you run SCAN FOR MARKETS (Scan tab), Claude outputs a complete, tailored Gemini brief at the bottom of its response. Copy that brief and paste it into Gemini 2.0 Pro with grounding enabled.
+
+---
+
+WHY GEMINI SPECIFICALLY:
+Gemini with grounding has live web access with citations. It can:
+- Pull current Polymarket odds directly from polymarket.com
+- Access breaking news published in the last hour
+- Find official statements and government releases in real time
+- Search superforecaster databases (Metaculus, Good Judgement Open)
+
+Claude's knowledge has a cutoff. Polymarket edge requires current information. Gemini bridges that gap.
+
+---
+
+EVERY GEMINI BRIEF ASKS FOR:
+
+1. CURRENT STATUS — real-time factual state of affairs, last 48–72h, 3+ primary sources
+
+2. BASE RATE RESEARCH — historical precedents, superforecaster aggregator data, prior probability
+
+3. KEY DECISION-MAKERS & INCENTIVES — who decides this outcome, their current positions, their interests
+
+4. OPPOSING EVIDENCE — strongest case for the other side, 2+ sources
+
+5. RESOLUTION CRITERIA DEEP DIVE — exact criteria, ambiguities, historical resolution precedent
+
+6. TIMELINE & CATALYST MAP — upcoming binary triggers, negotiations, deadlines
+
+7. SMART MONEY CHECK — volume spikes, odds movements, unusual activity
+
+---
+
+HOW TO USE:
+1. Scan tab → paste signal → Claude outputs Gemini brief
+2. Copy brief → paste into gemini.google.com (Gemini 2.0 Pro, grounding ON)
+3. Wait ~2–5 min for research output
+4. Copy Gemini's full output
+5. Paste into Analyse tab OR back into Scan research thread
+6. Claude runs full probability analysis and bet recommendation
+
+Gemini returns facts only. Claude makes the decision.`
+  },
+  analyse:{
+    label:'⚡ ANALYSE A MARKET',
+    color:'var(--lm)',
+    text:`You are a probabilistic reasoning specialist and prediction market analyst. You have received raw intelligence gathered by Gemini on a specific Polymarket market. Turn that raw intelligence into a precise probability estimate, edge calculation, and bet recommendation.
+
+You do NOT gather information — that has already been done. You analyse, reason, and decide.
+
+---
+
+## MY CONTEXT
+- Learning phase: £20–50 per bet. Building track record.
+- Stake tiers: Strong Bet + clean resolution = £50. BET or any ambiguity = £30. Marginal = £20.
+- Flag resolution risk always — even if not asked.
+
+---
+
+## STEP 1 — INTELLIGENCE AUDIT
+
+Assess quality of Gemini research before proceeding:
+
+| Research Task | Quality | Key Finding | Gaps |
+|--------------|---------|-------------|------|
+| Current Status | Complete/Partial/Missing | | |
+| Base Rates | Complete/Partial/Missing | | |
+| Decision-Makers | Complete/Partial/Missing | | |
+| Opposing Evidence | Complete/Partial/Missing | | |
+| Resolution Criteria | Complete/Partial/Missing | | |
+| Catalyst Map | Complete/Partial/Missing | | |
+| Smart Money | Complete/Partial/Missing | | |
+
+Research confidence: [High / Medium / Low]
+If Low on resolution criteria or current status: state what additional research is needed before betting.
+
+---
+
+## STEP 2 — RESOLUTION CRITERIA ASSESSMENT
+
+Evaluated BEFORE probability. Score 4 or 5 = PASS regardless of edge.
+
+Resolution Risk Score: [1 / 2 / 3 / 4 / 5]
+1 = Crystal clear. Objective, verifiable, no ambiguity.
+2 = Mostly clear. Minor edge cases unlikely to matter.
+3 = Some ambiguity. Specific technicality risk identified.
+4 = Significant risk. Could resolve in unexpected ways.
+5 = Avoid. Ambiguous criteria or controversial resolution precedent.
+
+Specific resolution risks identified: [list every edge case and technicality]
+Historical precedent: Has Polymarket resolved similar criteria before? How?
+GATE: If score 4 or 5 → PASS. Do not continue to probability analysis.
+
+---
+
+## STEP 3 — PROBABILITY ESTIMATE
+
+Base Rate Anchor:
+- Historical precedent suggests: [X%]
+- Source: [where this base rate comes from]
+- Applicability to current situation: [High / Medium / Low — explain]
+
+Evidence Adjustment Table:
+| Evidence | Direction | Weight | Adjustment |
+|----------|-----------|--------|------------|
+| [Finding 1] | Toward YES/NO | High/Med/Low | +X% / -X% |
+| [Decision-maker incentives] | | | |
+| [Smart money signal] | | | |
+| [Catalyst timing] | | | |
+
+Scenario Analysis:
+- Bull case (YES resolves): [pathway + probability: X%]
+- Base case: [pathway + probability: X%]
+- Bear case (NO resolves): [pathway + probability: X%]
+
+TRUE PROBABILITY ESTIMATE:
+P(YES) = [X%]
+Confidence interval: [X% – X%]
+Confidence tier: [High / Medium / Low]
+
+Explain in plain English: why X%? What is the single most important piece of evidence?
+
+---
+
+## STEP 4 — EDGE CALCULATION
+
+Current market odds: YES = [X%]
+Your true probability: P(YES) = [X%]
+Raw edge: [X percentage points]
+
+Edge interpretation:
+<3pp: No meaningful edge → PASS
+3–7pp: Moderate edge → viable at learning stakes
+7–15pp: Strong edge → good bet
+>15pp: Re-check — either you are right or missing something
+
+Edge type diagnosis:
+[ ] Slow update — market hasn't processed new information
+[ ] Second-order — market priced obvious outcome, not the consequence
+[ ] Base rate anchor — ignoring current signals
+[ ] Information lag — access to data not yet in market
+[ ] Sentiment distortion — narrative not probability
+
+Edge durability: [Hours / Days / Weeks]
+
+---
+
+## STEP 5 — BET RECOMMENDATION
+
+VERDICT: [STRONG BET / BET / MARGINAL / PASS / HARD PASS]
+
+Verdict logic:
+- STRONG BET: Edge ≥7pp + Confidence High + Resolution Risk ≤2
+- BET: Edge ≥3pp + Confidence Medium+ + Resolution Risk ≤3
+- MARGINAL: Edge exists but confidence or resolution risk reduces conviction
+- PASS: Edge <3pp, confidence Low, OR resolution risk ≥4
+- HARD PASS: Resolution risk 5 or evidence strongly against thesis
+
+Direction: [YES / NO]
+
+Stake Recommendation: £[20 / 30 / 50]
+Stake logic:
+- £50: STRONG BET + Resolution Risk ≤2 + Confidence High
+- £30: BET + any Resolution Risk 3 OR Confidence Medium
+- £20: MARGINAL or any uncertainty in research quality
+
+Implied return at this stake:
+- If correct: £[X] profit (X% return)
+- If wrong: £[X] loss
+- Expected value at true probability: £[X]
+
+---
+
+## STEP 6 — MONITORING PLAN
+
+Check-in frequency: [Daily / Every 2 days / Weekly]
+
+Exit triggers (close position early):
+- Exit YES if: [specific event undermining thesis]
+- Exit NO if: [specific event undermining thesis]
+
+Thesis validation events:
+- [Upcoming event that confirms you are right]
+- [Upcoming event that confirms you are wrong]
+
+The single most important thing to watch: [one sentence]
+
+---
+
+## STEP 7 — ANALYST'S VERDICT
+
+One honest paragraph. Does the edge hold up under scrutiny? Is the resolution criteria clean enough to trust? What is the most likely outcome and why? If you would not bet your own money on this at these odds, say so and explain why.
+
+---
+
+OPERATING RULES:
+- Resolution risk evaluated BEFORE probability — always
+- False precision is worse than honest uncertainty
+- If research incomplete, reduce stake accordingly
+- Edge must be explainable in one sentence
+- Never recommend >£50 during learning phase
+- EV calculation must use full confidence interval, not just point estimate`
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// REFERENCE DATA
+// ═══════════════════════════════════════════════════════
+const RES_SCALE=[
+  {score:1,label:'Crystal Clear',desc:'Objective, verifiable, no ambiguity possible',col:'var(--lm)'},
+  {score:2,label:'Mostly Clear',desc:'Minor edge cases, unlikely to matter in practice',col:'var(--lm)'},
+  {score:3,label:'Some Ambiguity',desc:'Specific technicality risk — research criteria carefully',col:'var(--am)'},
+  {score:4,label:'Significant Risk',desc:'Could resolve in unexpected ways — avoid unless edge is very large',col:'var(--rd)'},
+  {score:5,label:'Avoid',desc:'Subjective judgment required or controversial resolution precedent — always PASS',col:'var(--rd)'},
+];
+
+const EDGE_TYPES=[
+  {type:'Slow Update',col:'var(--cy)',speed:'Hours',desc:'Market hasn\'t processed a development from the last 24–48 hours. Most common on breaking geopolitical news. Edge closes within hours — act fast or it\'s gone.'},
+  {type:'Second-Order',col:'var(--gd)',speed:'Days',desc:'Market priced the obvious first-order outcome but missed the consequence. Example: Hormuz closes (priced) → US LNG exporters win (not yet priced in related markets). Edge closes in days.'},
+  {type:'Base Rate Anchor',col:'var(--am)',speed:'Days–Weeks',desc:'Market stuck on historical prior, ignoring current signals that shift probability. Common in political markets with strong historical patterns. Edge closes as new evidence accumulates.'},
+  {type:'Information Lag',col:'var(--lm)',speed:'Days–Weeks',desc:'You accessed a primary source, expert analysis, or piece of data that most participants haven\'t found yet. Most durable edge. Lasts until information becomes mainstream.'},
+];
+
+const STAKE_TIERS=[
+  {verdict:'STRONG BET',edge:'≥ 7pp',conf:'High',res:'≤ 2',stake:'£50',col:'var(--lm)'},
+  {verdict:'BET',edge:'≥ 3pp',conf:'Medium+',res:'≤ 3',stake:'£30',col:'var(--gd)'},
+  {verdict:'MARGINAL',edge:'Exists',conf:'Any concern',res:'Any',stake:'£20',col:'var(--am)'},
+  {verdict:'PASS',edge:'< 3pp',conf:'Low',res:'≥ 4',stake:'£0',col:'var(--t3)'},
+  {verdict:'HARD PASS',edge:'Any',conf:'Any',res:'5 or vs thesis',stake:'£0',col:'var(--rd)'},
+];
+
+const RULES=[
+  'Resolution risk is evaluated BEFORE probability. A clean edge on an ambiguous market is worthless.',
+  'The edge must be explainable in one sentence. If you cannot, you have a feeling — not an edge.',
+  'Never exceed £50 per bet during the learning phase, regardless of edge size.',
+  'Second-order effects are where the edge lives. Always ask: what did the market price vs what will happen?',
+  'Speed determines method: breaking news = hours. Policy = a day. Structural = multi-day research.',
+  'Gemini does the research. Claude does the analysis. You make the decision. Never short-circuit this.',
+  'Track every bet: market, stake, your P(YES), market P(YES), edge size, outcome. The record is the education.',
+  'After 20 bets with documented positive EV, review sizing. Not before.',
+];
+
+const SCANNER_STACK=[
+  {speed:'Minutes',name:'Google Alerts',how:'Set alerts: "Strait of Hormuz", "Iran sanctions", "NATO Article 5", "Taiwan Strait", "ceasefire". Free, instant email.'},
+  {speed:'Minutes',name:'Telegram Geopolitical',how:'OSINTdefender, Intel Slava Z, WarMonitor — real-time signals before mainstream media. Free.'},
+  {speed:'Hours',name:'Reuters RSS + Feedly',how:'Free RSS feed in Feedly. Primary source for geopolitical events. Set up by category: World, Politics, Energy.'},
+  {speed:'Hours',name:'Politico Newsletter',how:'Policy, defence spending, energy legislation. Where money moves before it moves Polymarket.'},
+  {speed:'Daily',name:'Metaculus',how:'Superforecaster base rates. Use as prior probability input for your Gemini briefs. Free public markets.'},
+  {speed:'Daily',name:'X/Twitter Network',how:'@RaoulGMI, @LynAldenContact, @TrentTelenko — second/third-order thinkers who surface what market hasn\'t priced.'},
+];
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  updateStatus();
+  setInterval(()=>{document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},1000);
+  document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('bet_date').value=new Date().toISOString().split('T')[0];
+  renderReference();
+  showPrompt('scan');
+  renderBets();
+});
+
+// ═══════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════
+function nav(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════════════════
+// KEYS MODAL
+// ═══════════════════════════════════════════════════════
+function openModal(){
+  document.getElementById('kAnt').value=K.ant;
+  document.getElementById('kSbU').value=K.sbU;
+  document.getElementById('kSbK').value=K.sbK;
+  document.getElementById('kTgT').value=K.tgt;
+  document.getElementById('kTgC').value=K.tgc;
+  document.getElementById('mOv').classList.remove('hidden');
+}
+function cm(){document.getElementById('mOv').classList.add('hidden');}
+function cmOut(e){if(e.target===document.getElementById('mOv'))cm();}
+function saveK(){
+  localStorage.setItem('pit_ant',document.getElementById('kAnt').value.trim());
+  localStorage.setItem('pit_sbU',document.getElementById('kSbU').value.trim());
+  localStorage.setItem('pit_sbK',document.getElementById('kSbK').value.trim());
+  localStorage.setItem('pit_tgt',document.getElementById('kTgT').value.trim());
+  localStorage.setItem('pit_tgc',document.getElementById('kTgC').value.trim());
+  updateStatus();cm();toast('Keys saved');
+}
+function updateStatus(){
+  const s=(d,l,ok,lb)=>{const dot=document.getElementById(d);if(!dot)return;dot.className='dot'+(ok?' live':'');if(!ok)dot.style.background='var(--t4)';document.getElementById(l).textContent=ok?lb+' ok':lb;};
+  s('dCl','lCl',!!K.ant,'Claude');
+  s('dSb','lSb',!!(K.sbU&&K.sbK),'Supabase');
+  s('dTg','lTg',!!K.tgt,'Telegram');
+}
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE API
+// ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// KEYS & STATE
+// ═══════════════════════════════════════════════════════
+const K={
+  get ant(){return localStorage.getItem('pit_ant')||'';},
+  get sbU(){return localStorage.getItem('pit_sbU')||'';},
+  get sbK(){return localStorage.getItem('pit_sbK')||'';},
+  get tgt(){return localStorage.getItem('pit_tgt')||'';},
+  get tgc(){return localStorage.getItem('pit_tgc')||'';},
+};
+
+let chatHist=[];
+let scanOrig='', scanResHistory=[];
+let activePromptKey='scan';
+
+// ═══════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════
+const SYS=`You are the PIT — Polymarket Intelligence Terminal analyst. You combine live web search, second-order geopolitical thinking, and disciplined probabilistic reasoning to find edges in prediction markets.
+
+═══ WHO YOU ARE ANALYSING FOR ═══
+The user has three genuine edges:
+1. SPEED on breaking news — they see geopolitical developments fast
+2. SECOND-ORDER THINKING — they naturally connect events to downstream consequences others miss
+3. DOMAIN DEPTH — strong understanding of geopolitics and AI/tech corporate dynamics
+
+They are in a LEARNING PHASE. No superforecasting background yet. Their bet log is their calibration tool — every bet logged is a data point for building accuracy over time. Your probability estimates must be honest and conservative, not optimistic.
+
+═══ THREE PERMITTED MARKET TYPES — PLAY ONLY THESE ═══
+
+TYPE 1 — GEOPOLITICAL BREAKING NEWS
+Markets: ceasefire rumours, escalations, sanctions, diplomatic events, military actions
+Edge mechanism: SLOW UPDATE — market hasn't processed news you saw 30-90 minutes ago
+Key question before every bet: When did this news break? Have the odds moved yet?
+If odds have already moved significantly → edge is gone → PASS
+Speed: Act within hours or not at all
+
+TYPE 2 — TECH & AI CORPORATE EVENTS
+Markets: specific binary outcomes — will X ship by date Y, will this regulation pass, will CEO stay
+Edge mechanism: DOMAIN KNOWLEDGE — you understand the technical or corporate reality better than generalist participants
+Key question: Do I understand this well enough to know something the average bettor doesn't?
+NOT for: earnings surprise markets — dominated by quant funds with Bloomberg terminals
+Speed: Hours to days
+
+TYPE 3 — SECOND-ORDER GEOPOLITICAL (your strongest edge, least crowded)
+Markets: downstream consequences of geopolitical events — price markets, corporate outcomes, supply chain effects that follow from a primary event
+Edge mechanism: INFORMATION LAG — you connected the signal to a market most participants haven't found yet
+Example: Hormuz closes (everyone bets that) → US LNG price markets not yet connected (your bet)
+Key question: Has anyone else connected this signal to this market yet?
+Speed: Days — durable edge
+
+═══ ONE ABSOLUTE RULE — SLOW POLITICAL MARKETS ARE OFF LIMITS ═══
+Elections, Fed decisions, policy timelines, referendum outcomes — HARD PASS on all of these.
+Reason: dominated by professional superforecasters with years of calibration data. The user has none yet.
+When to unlock: after 20+ closed bets showing calibration accuracy by market type.
+If user asks about a slow political market: explain this rule, suggest which of the 3 permitted types to focus on instead.
+
+═══ CALIBRATION AWARENESS ═══
+The user is building calibration from scratch via their bet log.
+When estimating P(YES), always give:
+- A point estimate: P(YES) = X%
+- An honest confidence interval: ± Xpp
+- A calibration note: "If you called X% 10 times and were right Y times, your estimate was [well/over/under] calibrated"
+Humans are systematically overconfident. When the user feels 80% sure, shade to 65-70%. When they feel certain, shade to 75-80%. Flag this explicitly.
+Never give a probability estimate without the confidence interval.
+
+═══ WEB SEARCH — MANDATORY SEQUENCE ═══
+For every analysis, search in this order:
+1. polymarket.com — find exact market, current YES odds, resolution criteria
+2. Breaking news last 48-72h on the topic (Reuters, AP, BBC, official statements)
+3. Metaculus or Good Judgement Open — base rate data
+4. Key decision-maker statements this week
+Never estimate odds from memory. Never use news older than 72h without flagging it.
+
+═══ RESOLUTION RISK — BEFORE EVERYTHING ELSE ═══
+Score 1-5. Score 4 or 5 = automatic HARD PASS, no exceptions.
+1 = Crystal clear. Objective, verifiable, no ambiguity.
+2 = Mostly clear. Minor edge cases unlikely to matter.
+3 = Some ambiguity. Specific technicality risk — research the exact criteria.
+4 = Significant risk. Could resolve unexpectedly. PASS.
+5 = Avoid. Subjective judgment or controversial precedent. HARD PASS.
+
+═══ STAKE SIZING — LEARNING PHASE ═══
+Maximum £50 per bet. Never exceed. Never soften this rule.
+STRONG BET (edge ≥7pp + confidence High + resolution ≤2 + permitted market type): £50
+BET (edge ≥3pp + confidence Medium+ + resolution ≤3 + permitted market type): £30
+MARGINAL (edge exists but any concern present): £20
+PASS (edge <3pp OR confidence Low OR resolution ≥4 OR not a permitted market type): £0
+HARD PASS (resolution 5, slow political market, or evidence strongly against): £0
+
+═══ THREE-QUESTION BET GATE ═══
+All three must be YES:
+1. Is this one of the 3 permitted market types?
+2. Edge ≥ 3pp AND resolution risk ≤ 3?
+3. Can the edge be explained in one sentence?
+If question 1 is NO → HARD PASS immediately, no further analysis needed.
+
+═══ PROBABILITY FRAMEWORK ═══
+Step 1: Base rate from historical precedent (search Metaculus/GJOpen)
+Step 2: Evidence table — each finding mapped to direction + weight + probability adjustment
+Step 3: Scenario analysis — bull/base/bear with probabilities that sum to 100%
+Step 4: Point estimate P(YES) = X% ± Xpp
+Step 5: Calibration shading — apply conservative correction for overconfidence
+Step 6: Single most important piece of evidence — state it explicitly
+Edge = P(YES)_true − P(YES)_market
+<3pp: PASS | 3-7pp: viable | 7-15pp: strong | >15pp: re-check, likely missing something
+
+═══ MACRO CONTEXT (March 2026) ═══
+Hormuz crisis: US-Israel strikes on Iran. Strait effectively closed. Qatar LNG offline. Brent $70→$126. Ceasefire negotiations ongoing via Oman.
+Agentic AI: OpenClaw fastest-growing OS in history. Compute demand 1,000-1,000,000x chatbot baseline. Nvidia confirmed as compute platform.
+Petrodollar stress: CIPS $245T yuan transactions. Saudi ended exclusive dollar pricing June 2024. Gold is 3-5yr beneficiary.
+
+═══ OPERATING RULES ═══
+- Search first. Analyse second. Never reverse.
+- Permitted market types only. Decline slow political markets explicitly.
+- Resolution risk before probability. Always.
+- Calibration interval on every probability estimate.
+- Conservative shading — the user is new, overconfidence is the primary risk.
+- PASS is valid and often correct. Never soften a PASS into a small speculative bet.
+- Every bet logged is calibration data. Treat it as such.
+- Never exceed £50. Never.`;
+
+// ═══════════════════════════════════════════════════════
+// PROMPTS DATA (reference only — analysis now uses web search)
+// ═══════════════════════════════════════════════════════
+const PROMPTS={
+  scan:{
+    label:'◎ SCAN FOR MARKETS',
+    color:'var(--cy)',
+    text:`You are a prediction market analyst with live web search. When given a signal:
+
+1. Search polymarket.com for all related markets + current odds
+2. Search for latest news on this topic (last 48-72h)
+3. Identify first/second/third-order effects
+4. Score every market found for resolution risk (1-5)
+5. Eliminate any market with resolution risk 4 or 5
+6. For remaining markets: estimate edge direction and size
+7. Return ranked list with preliminary thesis for top 2-3
+
+SIGNAL: [paste your signal here]
+
+For each market found:
+- Exact market question as it appears on Polymarket
+- Current YES odds (from live search)
+- Resolution risk score 1-5 with specific reason
+- Edge type: Slow update / Second-order / Base rate anchor / Information lag
+- Preliminary thesis: what specifically is the market getting wrong?
+- Speed: how long before this edge closes?
+
+MARKET TYPE GATE — before listing any market, confirm it fits one of:
+1. Geopolitical breaking news (ceasefire, escalation, sanctions, military action)
+2. Tech/AI corporate event (specific binary outcome you have domain knowledge on)
+3. Second-order geopolitical (downstream consequence of primary event)
+If a market is slow political (election, Fed, policy timeline) — exclude it entirely and explain why.
+
+End with: which single market has the best risk-adjusted edge right now and why. If none pass the gate, say so clearly.`
+  },
+  analyse:{
+    label:'⚡ ANALYSE A MARKET',
+    color:'var(--lm)',
+    text:`You are a probabilistic reasoning specialist with live web search. Given a market:
+
+1. Search polymarket.com for current live odds and resolution criteria
+2. Search for latest news (last 72h) from primary sources
+3. Search Metaculus/Good Judgement Open for base rate data
+4. Search for key decision-maker statements this week
+5. Run full probability analysis
+6. Calculate edge vs current market odds
+7. Give stake recommendation within £20-50 learning phase
+
+Structure:
+## LIVE DATA (what you found via search)
+## RESOLUTION CRITERIA ASSESSMENT [score 1-5]
+## PROBABILITY ESTIMATE [P(YES) = X% ± Xpp]
+## EDGE CALCULATION [Xpp — type]
+## BET RECOMMENDATION [STRONG BET/BET/MARGINAL/PASS/HARD PASS — £X]
+## MONITORING PLAN
+## ANALYST'S VERDICT
+
+MARKET: [paste exact Polymarket question]
+CURRENT ODDS: [YES X%] — verify via search
+SIGNAL: [what caught your attention]`
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// REFERENCE DATA
+// ═══════════════════════════════════════════════════════
+const RES_SCALE=[
+  {score:1,label:'Crystal Clear',desc:'Objective, verifiable, no ambiguity possible',col:'var(--lm)'},
+  {score:2,label:'Mostly Clear',desc:'Minor edge cases, unlikely to matter in practice',col:'var(--lm)'},
+  {score:3,label:'Some Ambiguity',desc:'Specific technicality risk — research criteria carefully before betting',col:'var(--am)'},
+  {score:4,label:'Significant Risk',desc:'Could resolve in unexpected ways — automatic PASS',col:'var(--rd)'},
+  {score:5,label:'Avoid',desc:'Subjective judgment or controversial resolution precedent — always PASS',col:'var(--rd)'},
+];
+
+const EDGE_TYPES=[
+  {type:'Slow Update',col:'var(--cy)',speed:'Hours',desc:'Market hasn\'t processed a development from the last 24-48 hours. Most common on breaking geopolitical news. Claude\'s web search catches this — it finds news the market hasn\'t priced yet.'},
+  {type:'Second-Order',col:'var(--gd)',speed:'Days',desc:'Market priced the obvious first-order outcome but missed the consequence. Example: Hormuz closes (priced) → US LNG price markets not yet moved. Your edge is connecting dots faster than the crowd.'},
+  {type:'Base Rate Anchor',col:'var(--am)',speed:'Days–Weeks',desc:'Market stuck on historical prior, ignoring current signals. Claude searches Metaculus and superforecaster data to find the real base rate, then adjusts for current signals.'},
+  {type:'Information Lag',col:'var(--lm)',speed:'Days–Weeks',desc:'You connected a signal to a market most participants haven\'t found yet. Most durable edge. Often discovered by thinking about corporate impact of geopolitical events.'},
+];
+
+const STAKE_TIERS=[
+  {verdict:'STRONG BET',edge:'≥ 7pp',conf:'High',res:'≤ 2',stake:'£50',col:'var(--lm)'},
+  {verdict:'BET',edge:'≥ 3pp',conf:'Medium+',res:'≤ 3',stake:'£30',col:'var(--gd)'},
+  {verdict:'MARGINAL',edge:'Exists',conf:'Any concern',res:'Any',stake:'£20',col:'var(--am)'},
+  {verdict:'PASS',edge:'< 3pp',conf:'Low',res:'≥ 4',stake:'£0',col:'var(--t3)'},
+  {verdict:'HARD PASS',edge:'Any',conf:'Any',res:'5 or vs thesis',stake:'£0',col:'var(--rd)'},
+];
+
+const RULES=[
+  'Search first. Analyse second. Never use stale odds or yesterday\'s news for a bet.',
+  'Resolution risk is evaluated BEFORE probability. A clean edge on an ambiguous market is worthless.',
+  'The edge must be explainable in one sentence. If you can\'t, it\'s a feeling — not an edge.',
+  'Never exceed £50 per bet during the learning phase, regardless of edge size.',
+  'Second-order effects are where the edge lives. What did the market price vs what will actually happen?',
+  'Speed determines urgency: breaking geopolitical = hours. Policy = a day. Structural = multi-day.',
+  'Track every bet: market, stake, your P(YES), market P(YES), edge, outcome. The record is the education.',
+  'After 20 bets with documented positive EV, review sizing. Not before.',
+];
+
+const SCANNER_STACK=[
+  {speed:'Minutes',name:'Google Alerts',how:'Set alerts: "Strait of Hormuz", "Iran sanctions", "NATO Article 5", "ceasefire". Free, instant email. These feed directly into PIT\'s Scan tab.'},
+  {speed:'Minutes',name:'Telegram Geopolitical',how:'OSINTdefender, Intel Slava Z, WarMonitor — real-time signals before mainstream media. Paste into Scan tab the moment you see something.'},
+  {speed:'Hours',name:'Reuters RSS + Feedly',how:'Free RSS feed. Primary source for geopolitical events. Set up by category: World, Politics, Energy.'},
+  {speed:'Hours',name:'Politico Newsletter',how:'Policy, defence spending, energy legislation. Where money moves before it moves Polymarket.'},
+  {speed:'Daily',name:'X/Twitter Network',how:'@RaoulGMI, @LynAldenContact, @TrentTelenko — second/third-order thinkers who surface what the market hasn\'t priced yet.'},
+];
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  updateStatus();
+  setInterval(()=>{document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},1000);
+  document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('bet_date').value=new Date().toISOString().split('T')[0];
+  renderReference();
+  showPrompt('scan');
+  renderBets();
+});
+
+// ═══════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════
+function nav(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════════════════
+// KEYS MODAL
+// ═══════════════════════════════════════════════════════
+function openModal(){
+  document.getElementById('kAnt').value=K.ant;
+  document.getElementById('kSbU').value=K.sbU;
+  document.getElementById('kSbK').value=K.sbK;
+  document.getElementById('kTgT').value=K.tgt;
+  document.getElementById('kTgC').value=K.tgc;
+  document.getElementById('mOv').classList.remove('hidden');
+}
+function cm(){document.getElementById('mOv').classList.add('hidden');}
+function cmOut(e){if(e.target===document.getElementById('mOv'))cm();}
+function saveK(){
+  localStorage.setItem('pit_ant',document.getElementById('kAnt').value.trim());
+  localStorage.setItem('pit_sbU',document.getElementById('kSbU').value.trim());
+  localStorage.setItem('pit_sbK',document.getElementById('kSbK').value.trim());
+  localStorage.setItem('pit_tgt',document.getElementById('kTgT').value.trim());
+  localStorage.setItem('pit_tgc',document.getElementById('kTgC').value.trim());
+  updateStatus();cm();toast('Keys saved');
+}
+function updateStatus(){
+  const s=(d,l,ok,lb)=>{const dot=document.getElementById(d);if(!dot)return;dot.className='dot'+(ok?' live':'');if(!ok)dot.style.background='var(--t4)';document.getElementById(l).textContent=ok?lb+' ✓':lb;};
+  s('dCl','lCl',!!K.ant,'Claude');
+  s('dSb','lSb',!!(K.sbU&&K.sbK),'Supabase');
+  s('dTg','lTg',!!K.tgt,'Telegram');
+}
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE API — web search enabled
+// ═══════════════════════════════════════════════════════
+async function claude(messages, system=null, maxTokens=4000, useWebSearch=false, injectCalib=true){
+  if(!K.ant){toast('Add Claude API key first','warn');openModal();throw new Error('No API key');}
+
+  // Build system prompt with calibration profile injected
+  let fullSystem=system||SYS;
+  if(injectCalib&&fullSystem===SYS){
+    const calibProfile=await buildCalibProfile();
+    if(calibProfile) fullSystem=calibProfile+'
+'+SYS;
+  }
+
+  const body={
+    model:'claude-sonnet-4-20250514',
+    max_tokens:maxTokens,
+    messages,
+  };
+  if(fullSystem) body.system=fullSystem;
+
+  // Web search tool — Claude searches the live web
+  if(useWebSearch){
+    body.tools=[{type:'web_search_20250305',name:'web_search'}];
+  }
+
+  const r=await fetch('/api/claude',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body),
+  });
+  const d=await r.json();
+  if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+
+  // Extract all text blocks — web search returns mixed content blocks
+  if(d.content&&Array.isArray(d.content)){
+    return d.content
+      .filter(b=>b.type==='text')
+      .map(b=>b.text)
+      .join('\n')
+      .trim()||'';
+  }
+  return d._extracted_text||'';
+}
+
+// ═══════════════════════════════════════════════════════
+// SCAN TAB — web search powered
+// ═══════════════════════════════════════════════════════
+async function runScan(){
+  const text=document.getElementById('scanIn').value.trim();
+  if(!text){toast('Paste a signal first','warn');return;}
+  scanOrig=text;
+  scanResHistory=[];
+  document.getElementById('scanOut').innerHTML='';
+  document.getElementById('scanThread').innerHTML='';
+  document.getElementById('scanResInput').value='';
+  document.getElementById('scanQs').style.display='none';
+  const btn=document.getElementById('btnScan');
+  btn.disabled=true;
+  btn.innerHTML='<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:4px;"></div>Searching live...';
+  showScanLoad('Searching Polymarket + live news...');
+
+  try{
+    const prompt=`You have live web search. Use it now before doing anything else.
+
+SIGNAL TO ANALYSE:
+${text}
+
+MANDATORY SEARCH SEQUENCE — complete all of these:
+1. Search polymarket.com for markets related to this signal — find exact questions and current odds
+2. Search for breaking news on this topic from the last 48-72 hours (Reuters, BBC, AP)
+3. Search for any official statements or government positions from this week
+4. Search Metaculus for base rate data if relevant
+
+Then apply the full SCAN FOR MARKETS framework:
+
+## LIVE DATA FOUND
+List every market you found on Polymarket with current YES odds. If no direct market, list the closest related ones.
+
+## SIGNAL ANALYSIS
+- First-order effect: what is already priced
+- Second-order effect: what the market hasn't priced yet
+- Third-order effect: what no one is thinking about yet
+- Edge type: [Slow update / Second-order / Base rate anchor / Information lag]
+
+## MARKET SCORES
+For each market found:
+| Market | YES odds | Resolution Risk [1-5] | Edge Direction | Speed |
+List only markets with resolution risk ≤ 3
+
+## TOP OPPORTUNITY
+The single best market right now. Preliminary thesis in 2-3 sentences. What specifically is the market getting wrong?
+
+## NEXT STEP
+Tap GET VERDICT for full probability analysis and stake recommendation on the top opportunity.`;
+
+    const resp=await claude(
+      [{role:'user',content:prompt}],
+      SYS,
+      4000,
+      true  // web search ON
+    );
+
+    scanResHistory.push({role:'user',content:'Signal: '+text.substring(0,400)});
+    scanResHistory.push({role:'assistant',content:resp});
+    document.getElementById('scanQs').style.display='block';
+    document.getElementById('scanThread').innerHTML=renderResearchMsg('claude',resp);
+    hideScanLoad();
+    btn.disabled=false;
+    btn.innerHTML='◎ SCAN FOR MARKETS';
+    toast('Live search complete — review markets then tap GET VERDICT');
+    document.getElementById('scanResInput').placeholder='Add context, ask a follow-up, or tap GET VERDICT below...';
+  }catch(e){
+    hideScanLoad();
+    btn.disabled=false;
+    btn.innerHTML='◎ SCAN FOR MARKETS';
+    document.getElementById('scanOut').innerHTML=`<div class="err">Error: ${e.message}<br><br>If this is an API error, check your key in ⚙ Keys. Web search requires a valid Anthropic API key.</div>`;
+  }
+}
+
+async function sendScanResearch(){
+  const input=document.getElementById('scanResInput');
+  const msg=input.value.trim();
+  if(!msg){toast('Type something first','warn');return;}
+  const thread=document.getElementById('scanThread');
+  thread.innerHTML+=renderResearchMsg('user',msg);
+  scanResHistory.push({role:'user',content:msg});
+  input.value='';
+  thread.scrollTop=thread.scrollHeight;
+  const btn=document.getElementById('btnSendScan');
+  btn.disabled=true;btn.textContent='...';
+  showScanLoad('Thinking...');
+  try{
+    const systemMsg=`You are helping refine a Polymarket analysis. Use web search if the user asks for updated data.
+Original signal: "${scanOrig.substring(0,400)}"
+Rules: Do NOT give full verdicts or stake recommendations here. Only clarify, add data, or confirm readiness. When ready say ONLY: "✓ Ready. Tap GET VERDICT for full analysis." Max 5 lines.`;
+    // Only use web search if user explicitly asks for updated info
+    const needsSearch=/search|current|latest|now|today|odds|live/i.test(msg);
+    const resp=await claude(scanResHistory,systemMsg,800,needsSearch);
+    scanResHistory.push({role:'assistant',content:resp});
+    thread.innerHTML+=renderResearchMsg('claude',resp);
+    thread.scrollTop=thread.scrollHeight;
+    hideScanLoad();btn.disabled=false;btn.textContent='↑ SEND';
+  }catch(e){
+    hideScanLoad();btn.disabled=false;btn.textContent='↑ SEND';
+    thread.innerHTML+=renderResearchMsg('claude','Error: '+e.message);
+  }
+}
+
+async function getScanVerdict(){
+  const btn=document.getElementById('btnScanVerdict');
+  btn.disabled=true;
+  btn.innerHTML='<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:4px;display:inline-block;"></div>Analysing...';
+  showScanLoad('Running full probability analysis...');
+  const researchCtx=scanResHistory.map(m=>`${m.role==='user'?'TRADER':'ANALYST'}: ${m.content}`).join('\n\n');
+
+  try{
+    const prompt=`${SYS}
+
+Original signal: "${scanOrig}"
+
+Research already done:
+${researchCtx}
+
+Now run the FULL ANALYSE A MARKET framework on the BEST opportunity identified above. Use web search to verify current odds and any facts that may have changed. Be definitive.
+
+## MARKET IDENTIFIED
+[exact Polymarket question + current YES odds from live search]
+
+## RESOLUTION CRITERIA ASSESSMENT
+[score 1-5 with specific reason — search the actual resolution criteria]
+
+## PROBABILITY ESTIMATE
+Base rate: [X% from historical precedent — cite source]
+Key adjustments: [table of evidence → direction → weight → adjustment]
+Scenarios: Bull [X%] / Base [X%] / Bear [X%]
+P(YES) = [X%] ± [Xpp] — Confidence: [High/Medium/Low]
+Most important piece of evidence: [one sentence]
+
+## EDGE CALCULATION
+Market odds: YES = [X%]
+True probability: P(YES) = [X%]
+Raw edge: [Xpp]
+Edge type: [which of the 4 types]
+Edge durability: [Hours/Days/Weeks]
+
+## BET RECOMMENDATION
+Verdict: [STRONG BET / BET / MARGINAL / PASS / HARD PASS]
+Direction: [YES / NO]
+Stake: £[20/30/50] — reasoning
+
+## MONITORING PLAN
+Exit if: [specific event]
+Confirms thesis if: [specific event]
+Check frequency: [Daily/Every 2 days]
+
+## ANALYST'S VERDICT
+[One honest paragraph. Would you bet your own money on this at these odds?]`;
+
+    const resp=await claude([{role:'user',content:prompt}],null,4000,true);
+    renderScanVerdict(resp,'SIGNAL ANALYSIS');
+    hideScanLoad();
+    btn.disabled=false;
+    btn.innerHTML='⚡ GET VERDICT';
+
+    // Telegram alert
+    const vl=getVerdict(resp);
+    await sendTg(`◎ *PIT — ${vl}*\n\n${resp.substring(0,600)}\n\n_Full analysis in PIT terminal_`);
+  }catch(e){
+    hideScanLoad();
+    btn.disabled=false;
+    btn.innerHTML='⚡ GET VERDICT';
+    document.getElementById('scanOut').innerHTML=`<div class="err">Error: ${e.message}</div>`;
+  }
+}
+
+function renderScanVerdict(text,title){
+  const vl=getVerdict(text);
+  const vc=verdictClass(vl);
+  document.getElementById('scanOut').innerHTML=`<div class="ao">
+    <div class="ao-h"><div class="ao-tk">${title}</div><div class="vb ${vc}">${vl}</div></div>
+    <div class="ao-body">${fmt(text)}</div>
+    <div class="verdict-actions">
+      <button class="btn btn-placed btn-sm" onclick="openBetModal(${JSON.stringify(text)},'real')">✓ BET PLACED</button>
+      <button class="btn btn-paper btn-sm" onclick="openBetModal(${JSON.stringify(text)},'paper')">◎ PAPER TRADE</button>
+      <button class="btn btn-pass btn-sm" onclick="clearScan()">✕ PASS</button>
+      <button class="btn btn-gh btn-sm" style="margin-left:auto;" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied')">Copy</button>
+    </div>
+  </div>`;
+}
+
+function clearScan(){
+  document.getElementById('scanIn').value='';
+  document.getElementById('scanQs').style.display='none';
+  document.getElementById('scanOut').innerHTML='';
+  document.getElementById('scanThread').innerHTML='';
+  document.getElementById('scanResInput').value='';
+  scanOrig='';scanResHistory=[];
+  document.getElementById('btnScan').disabled=false;
+  document.getElementById('btnScan').innerHTML='◎ SCAN FOR MARKETS';
+}
+
+function showScanLoad(m){document.getElementById('scanLoad').style.display='flex';document.getElementById('scanLoadT').textContent=m;}
+function hideScanLoad(){document.getElementById('scanLoad').style.display='none';}
+
+// ═══════════════════════════════════════════════════════
+// ANALYSE TAB — web search powered, no Gemini needed
+// ═══════════════════════════════════════════════════════
+async function runAnalysis(){
+  const q=document.getElementById('mktQ').value.trim();
+  const yes=document.getElementById('mktYes').value;
+  const date=document.getElementById('mktDate').value;
+  const why=document.getElementById('mktWhy').value.trim();
+  const extra=document.getElementById('mktGemini').value.trim(); // now optional extra context
+  if(!q){toast('Enter the market question','warn');return;}
+
+  const btn=document.getElementById('btnAnalyse');
+  btn.disabled=true;
+  btn.innerHTML='<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:4px;display:inline-block;"></div>Searching live...';
+  const loadMsgs=['Searching Polymarket...','Checking live odds...','Finding base rates...','Running probability model...','Calculating edge...','Forming verdict...'];
+  let mi=0;
+  const lt=setInterval(()=>{document.getElementById('analyseLT').textContent=loadMsgs[++mi%loadMsgs.length];},1600);
+  document.getElementById('analyseLoad').style.display='flex';
+  document.getElementById('analyseOut').innerHTML='';
+
+  try{
+    const prompt=`Use web search now before doing anything else.
+
+MARKET TO ANALYSE:
+Question: ${q}
+Stated YES odds: ${yes?yes+'%':'unknown — search for current odds'}
+Resolution date: ${date||'unknown — search for this'}
+Why I\'m looking: ${why||'not specified'}
+${extra?'Additional context:\n'+extra:''}
+
+MANDATORY SEARCH SEQUENCE:
+1. Search polymarket.com for this exact market — confirm current YES odds and resolution criteria
+2. Search for breaking news on this topic from last 72 hours
+3. Search Metaculus or Good Judgement Open for base rate / superforecaster data
+4. Search for official statements from key decision-makers this week
+5. Search for any smart money movement or volume spikes on this market
+
+Then run the full analysis:
+
+## LIVE DATA FOUND
+Current YES odds: [from search — note if different from stated]
+Resolution criteria: [exact text from Polymarket]
+Resolution date: [confirmed]
+Key recent news: [top 3 findings with dates]
+
+## RESOLUTION CRITERIA ASSESSMENT
+Score: [1-5]
+Reason: [specific — what technicality risks exist?]
+If score 4 or 5: STOP — return HARD PASS with explanation.
+
+## PROBABILITY ESTIMATE
+Base rate: [X% — source from superforecaster data or historical precedent]
+Evidence table:
+| Evidence | Direction | Weight | Adjustment |
+P(YES) = [X%] ± [Xpp]
+Confidence: [High/Medium/Low]
+Most important evidence: [one sentence]
+
+## EDGE CALCULATION
+Market odds: YES = [X%] (verified from search)
+True probability: P(YES) = [X%]
+Raw edge: [Xpp]
+Edge type: [Slow update / Second-order / Base rate anchor / Information lag]
+Edge durability: [Hours / Days / Weeks]
+
+## BET RECOMMENDATION
+Verdict: [STRONG BET / BET / MARGINAL / PASS / HARD PASS]
+Direction: [YES / NO]
+Stake: £[20/30/50]
+Implied return: £[X] profit if correct / £[X] loss if wrong
+Expected value: £[X]
+
+## MONITORING PLAN
+Exit YES if: [specific event]
+Exit NO if: [specific event]
+Confirms thesis: [specific event]
+Most important thing to watch: [one sentence]
+
+## ANALYST'S VERDICT
+[One honest paragraph. Does the edge hold up? Is resolution criteria clean enough? Would you bet your own money?]`;
+
+    const resp=await claude([{role:'user',content:prompt}],SYS,4000,true);
+    renderAnalysisOut(q,resp);
+    const vl=getVerdict(resp);
+    await sendTg(`⚡ *PIT — ${vl}*\n\n*${q.substring(0,80)}*\n\n${resp.substring(0,500)}\n\n_Full analysis in PIT terminal_`);
+  }catch(e){
+    document.getElementById('analyseOut').innerHTML=`<div class="err">Failed: ${e.message}</div>`;
+  }finally{
+    clearInterval(lt);
+    document.getElementById('analyseLoad').style.display='none';
+    btn.disabled=false;
+    btn.innerHTML='⚡ RUN FULL ANALYSIS';
+  }
+}
+
+function renderAnalysisOut(q,text){
+  const vl=getVerdict(text);
+  const vc=verdictClass(vl);
+  document.getElementById('analyseOut').innerHTML=`<div class="ao">
+    <div class="ao-h">
+      <div class="ao-tk">${q.substring(0,60)}${q.length>60?'…':''}</div>
+      <div class="vb ${vc}">${vl}</div>
+    </div>
+    <div class="ao-body">${fmt(text)}</div>
+    <div class="verdict-actions">
+      <button class="btn btn-placed btn-sm" onclick="openBetModal(${JSON.stringify(text)},'real')">✓ BET PLACED</button>
+      <button class="btn btn-paper btn-sm" onclick="openBetModal(${JSON.stringify(text)},'paper')">◎ PAPER TRADE</button>
+      <button class="btn btn-pass btn-sm" onclick="document.getElementById('analyseOut').innerHTML=''">✕ PASS</button>
+      <button class="btn btn-gh btn-sm" style="margin-left:auto;" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied')">Copy</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// CHAT TAB — web search for live queries
+// ═══════════════════════════════════════════════════════
+async function sendChat(){
+  const inp=document.getElementById('ciIn');
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value='';ar(inp);
+  addMsg('u',msg);
+  chatHist.push({role:'user',content:msg});
+  document.getElementById('cSend').disabled=true;
+  const tid=addTyping();
+
+  // Use web search if the question seems to need live data
+  const needsSearch=/current|live|now|today|latest|polymarket|odds|what is|what are|price|check/i.test(msg);
+
+  try{
+    const resp=await claude(chatHist,SYS,2000,needsSearch);
+    rmTyping(tid);addMsg('c',resp);
+    chatHist.push({role:'assistant',content:resp});
+    if(chatHist.length>20)chatHist=chatHist.slice(-16);
+  }catch(e){rmTyping(tid);addMsg('c','Error: '+e.message);}
+  document.getElementById('cSend').disabled=false;
+}
+
+function qk(t){document.getElementById('ciIn').value=t;sendChat();}
+
+function addMsg(role,text){
+  const el=document.getElementById('chatMsgs');
+  const tm=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const d=document.createElement('div');d.className=`msg msg-${role}`;
+  d.innerHTML=`<div><div class="bbl">${role==='u'?text.replace(/</g,'&lt;'):fmt(text)}</div><div class="msg-meta">${role==='u'?'You':'PIT Analyst'} · ${tm}</div></div>`;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+function addTyping(){
+  const el=document.getElementById('chatMsgs');const id='ty'+Date.now();
+  const d=document.createElement('div');d.className='msg msg-c';d.id=id;
+  d.innerHTML='<div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div></div>';
+  el.appendChild(d);el.scrollTop=el.scrollHeight;return id;
+}
+function rmTyping(id){document.getElementById(id)?.remove();}
+function clearChat(){
+  chatHist=[];
+  document.getElementById('chatMsgs').innerHTML='<div class="msg msg-c"><div><div class="bbl"><strong>Chat cleared.</strong><br>Ask me anything. I can search Polymarket live.</div><div class="msg-meta">PIT Analyst · Ready</div></div></div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// BETS TAB
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// SUPABASE MEMORY — reads and writes to shared DB
+// ═══════════════════════════════════════════════════════
+async function sbFetch(table, params=''){
+  if(!K.sbU||!K.sbK) return null;
+  try{
+    const r=await fetch(`${K.sbU}/rest/v1/${table}?${params}`,{
+      headers:{'apikey':K.sbK,'Authorization':`Bearer ${K.sbK}`}
+    });
+    return r.ok?await r.json():null;
+  }catch{return null;}
+}
+
+async function sbInsert(table, row){
+  if(!K.sbU||!K.sbK) return null;
+  try{
+    const r=await fetch(`${K.sbU}/rest/v1/${table}`,{
+      method:'POST',
+      headers:{'apikey':K.sbK,'Authorization':`Bearer ${K.sbK}`,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify(row)
+    });
+    const d=await r.json();
+    return Array.isArray(d)?d[0]:d;
+  }catch{return null;}
+}
+
+async function sbUpdate(table, params, updates){
+  if(!K.sbU||!K.sbK) return;
+  try{
+    await fetch(`${K.sbU}/rest/v1/${table}?${params}`,{
+      method:'PATCH',
+      headers:{'apikey':K.sbK,'Authorization':`Bearer ${K.sbK}`,'Content-Type':'application/json'},
+      body:JSON.stringify(updates)
+    });
+  }catch{}
+}
+
+// ═══════════════════════════════════════════════════════
+// CALIBRATION PROFILE — injected into every Claude call
+// ═══════════════════════════════════════════════════════
+async function buildCalibProfile(){
+  const bets=getBets();
+  const closed=bets.filter(b=>b.status==='CLOSED'&&b.isReal);
+  const paper=bets.filter(b=>b.status==='CLOSED'&&!b.isReal);
+  const open=bets.filter(b=>b.status==='OPEN');
+
+  if(!closed.length&&!paper.length) return '';
+
+  const types={geo:'Geopolitical',tech:'Tech/AI',second:'Second-order'};
+  let profile='═══ YOUR CALIBRATION PROFILE (injected from bet log) ═══
+';
+  profile+=`Real bets closed: ${closed.length} | Paper trades closed: ${paper.length} | Open: ${open.length}
+
+`;
+
+  // Per market type
+  Object.entries(types).forEach(([key,label])=>{
+    const tb=closed.filter(b=>b.mktType===key);
+    if(!tb.length) return;
+    const wins=tb.filter(b=>b.pnl>0).length;
+    const winPct=Math.round(wins/tb.length*100);
+    const avgConf=Math.round(tb.reduce((s,b)=>s+(b.dir==='YES'?b.myOdds:(100-b.myOdds)),0)/tb.length);
+    const calibGap=winPct-avgConf;
+    const pnl=tb.reduce((s,b)=>s+(b.pnl||0),0);
+    profile+=`${label}: ${tb.length} real bets · ${winPct}% win rate · avg confidence ${avgConf}%
+`;
+    if(Math.abs(calibGap)<=5) profile+=`  → Well calibrated on ${label}
+`;
+    else if(calibGap<-5) profile+=`  → OVERCONFIDENT by ${Math.abs(calibGap)}pp on ${label} — shade estimates DOWN ${Math.abs(calibGap)}pp
+`;
+    else profile+=`  → Underconfident by ${calibGap}pp on ${label} — can shade estimates UP slightly
+`;
+    profile+=`  → P&L: ${pnl>=0?'+':''}£${pnl}
+
+`;
+  });
+
+  // Paper vs real divergence
+  if(paper.length>=3&&closed.length>=3){
+    const rWin=Math.round(closed.filter(b=>b.pnl>0).length/closed.length*100);
+    const pWin=Math.round(paper.filter(b=>b.pnl>0).length/paper.length*100);
+    const div=rWin-pWin;
+    if(Math.abs(div)>10){
+      profile+=`PAPER vs REAL DIVERGENCE: Real ${rWin}% win, Paper ${pWin}% win (${div>0?'+':''}${div}pp)
+`;
+      if(div<-10) profile+=`  → You perform WORSE with real money. Likely execution hesitation or second-guessing. Trust the analysis.
+`;
+      else if(div>10) profile+=`  → You perform BETTER with real money. Good — pressure improves your decisions.
+`;
+    }
+  }
+
+  // Thesis quality
+  const thesisHeld=closed.filter(b=>b.thesisHeld==='yes').length;
+  if(closed.length>=5){
+    profile+=`Thesis quality: ${thesisHeld}/${closed.length} theses held as predicted (${Math.round(thesisHeld/closed.length*100)}%)
+`;
+  }
+
+  // Overdue open bets
+  const today=new Date();
+  const overdue=open.filter(b=>{
+    if(!b.resDate) return false;
+    return new Date(b.resDate)<today;
+  });
+  if(overdue.length){
+    profile+=`
+OVERDUE (resolution date passed, no outcome logged):
+`;
+    overdue.forEach(b=>profile+=`  - "${b.q.substring(0,60)}" — was due ${b.resDate}
+`);
+  }
+
+  profile+='═══════════════════════════════════════════════════
+';
+  return profile;
+}
+
+// ═══════════════════════════════════════════════════════
+// BET MODAL — real vs paper mode
+// ═══════════════════════════════════════════════════════
+let _betMode='real';
+let _verdictText='';
+
+function getBets(){return JSON.parse(localStorage.getItem('pit_bets')||'[]');}
+function saveBets(b){localStorage.setItem('pit_bets',JSON.stringify(b));}
+
+function openBetModal(verdictText, mode='real'){
+  _verdictText=verdictText||'';
+  _betMode=mode;
+  // Reset fields
+  document.getElementById('bet_q').value='';
+  document.getElementById('bet_mktOdds').value='';
+  document.getElementById('bet_myOdds').value='';
+  document.getElementById('bet_edge').value='';
+  document.getElementById('bet_exit').value='';
+  document.getElementById('bet_date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('bet_resDate').value='';
+  document.getElementById('bet_mktType').value='geo';
+  document.getElementById('bet_resRisk').value='2';
+  document.getElementById('bet_dir').value='YES';
+  document.getElementById('bet_stake').value='30';
+  setBetMode(mode);
+  // Pre-fill from verdict
+  if(_verdictText) _prefillFromVerdict(_verdictText);
+  document.getElementById('betOv').classList.remove('hidden');
+}
+
+function openAddBet(){openBetModal('','real');}
+
+function setBetMode(mode){
+  _betMode=mode;
+  const isReal=mode==='real';
+  document.getElementById('modeBtnReal').className=`mode-btn real ${isReal?'':'inactive'}`;
+  document.getElementById('modeBtnPaper').className=`mode-btn paper ${isReal?'inactive':''}`;
+  document.getElementById('betModalTitle').textContent=isReal?'BET PLACED':'PAPER TRADE';
+  document.getElementById('betModalSub').textContent=isReal?'Real money · Trains the AI · Builds calibration':'Tracking only · Separate from real calibration';
+  document.getElementById('modeNote').style.color=isReal?'var(--lm)':'var(--gd)';
+  document.getElementById('modeNote').textContent=isReal?'Real bet — outcome trains the AI. Only log this if you actually placed money.':'Paper trade — tracked separately. Compare vs real accuracy over time.';
+  document.getElementById('betSaveBtn').className=`btn btn-full ${isReal?'btn-lm':'btn-paper'}`;
+  document.getElementById('betSaveBtn').textContent=isReal?'✓ SAVE REAL BET':'◎ SAVE PAPER TRADE';
+}
+
+function closeBetModal(){document.getElementById('betOv').classList.add('hidden');}
+
+function _prefillFromVerdict(text){
+  const dirMatch=text.match(/Direction:\s*(YES|NO)/i);
+  if(dirMatch) document.getElementById('bet_dir').value=dirMatch[1].toUpperCase();
+  const stakeMatch=text.match(/Stake:\s*£(20|30|50)/i);
+  if(stakeMatch) document.getElementById('bet_stake').value=stakeMatch[1];
+  const edgeMatch=text.match(/Edge type:\s*([^
+]+)/i);
+  if(edgeMatch) document.getElementById('bet_edge').value=edgeMatch[1].trim().substring(0,100);
+  const rrMatch=text.match(/Score:\s*([1-5])/i)||text.match(/Resolution Risk.*?([1-5])/i);
+  if(rrMatch) document.getElementById('bet_resRisk').value=rrMatch[1];
+  const mktOddsMatch=text.match(/Market odds.*?YES\s*=\s*(\d+)/i)||text.match(/Current YES odds:\s*(\d+)/i);
+  if(mktOddsMatch) document.getElementById('bet_mktOdds').value=mktOddsMatch[1];
+  const myOddsMatch=text.match(/P\(YES\)\s*=\s*(\d+)/i)||text.match(/True probability.*?(\d+)%/i);
+  if(myOddsMatch) document.getElementById('bet_myOdds').value=myOddsMatch[1];
+  const resDateMatch=text.match(/Resolution date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+  if(resDateMatch) document.getElementById('bet_resDate').value=resDateMatch[1];
+  const t=text.toLowerCase();
+  if(/second.order|downstream|supply chain|lng|energy.*consequence/i.test(t)){
+    document.getElementById('bet_mktType').value='second';
+  } else if(/tech|ai|corporate|earnings|regulation|product|ceo|launch/i.test(t)){
+    document.getElementById('bet_mktType').value='tech';
+  } else {
+    document.getElementById('bet_mktType').value='geo';
+  }
+}
+
+async function saveBet(){
+  const q=document.getElementById('bet_q').value.trim();
+  const dir=document.getElementById('bet_dir').value;
+  const stake=parseInt(document.getElementById('bet_stake').value);
+  const mktOdds=parseFloat(document.getElementById('bet_mktOdds').value);
+  const myOdds=parseFloat(document.getElementById('bet_myOdds').value);
+  const resRisk=parseInt(document.getElementById('bet_resRisk').value);
+  const edge=document.getElementById('bet_edge').value.trim();
+  const exit=document.getElementById('bet_exit').value.trim();
+  const date=document.getElementById('bet_date').value;
+  const resDate=document.getElementById('bet_resDate').value;
+  const mktType=document.getElementById('bet_mktType').value;
+  const isReal=_betMode==='real';
+  if(!q||!mktOdds||!myOdds){toast('Market question and odds required','warn');return;}
+
+  const bet={
+    id:Date.now(),q,dir,stake,mktOdds,myOdds,resRisk,mktType,
+    edge,exit,date,resDate,isReal,
+    status:'OPEN',outcome:null,pnl:null,thesisHeld:null,
+    sbId:null // will be set after Supabase insert
+  };
+
+  // Save locally first
+  const bets=getBets();
+  bets.unshift(bet);
+  saveBets(bets);
+
+  // Save to Supabase if connected
+  if(K.sbU&&K.sbK){
+    const row=await sbInsert('pit_verdicts',{
+      source:'pit',
+      market_type:mktType,
+      question:q,
+      claude_probability:myOdds,
+      market_odds:mktOdds,
+      edge_pp:dir==='YES'?myOdds-mktOdds:(100-myOdds)-(100-mktOdds),
+      verdict:isReal?'REAL_BET':'PAPER_TRADE',
+      stake:isReal?stake:0,
+      direction:dir,
+      resolution_date:resDate||null,
+      is_real:isReal
+    });
+    if(row?.id){
+      // Update local bet with Supabase ID for later outcome linking
+      const bets2=getBets();
+      const b=bets2.find(x=>x.id===bet.id);
+      if(b){b.sbId=row.id;saveBets(bets2);}
+    }
+  }
+
+  closeBetModal();renderBets();
+  toast(isReal?'✓ Real bet saved — AI will learn from this outcome':'◎ Paper trade saved');
+
+  // Telegram notification for real bets
+  if(isReal){
+    const edgePp=dir==='YES'?myOdds-mktOdds:(100-myOdds)-(100-mktOdds);
+    await sendTg(`◎ *PIT BET PLACED*
+
+${q.substring(0,80)}
+${dir} · £${stake} · Edge: ${edgePp>=0?'+':''}${edgePp.toFixed(1)}pp
+Mkt: ${mktOdds}% · Your P: ${myOdds}%${resDate?'
+Resolves: '+resDate:''}`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RESOLVE MODAL — log outcome, train AI
+// ═══════════════════════════════════════════════════════
+let _resolveOutcome=null;
+
+function openResolveModal(id){
+  const bets=getBets();
+  const b=bets.find(x=>x.id===id);if(!b)return;
+  _resolveOutcome=null;
+  document.getElementById('resolveId').value=id;
+  document.getElementById('resolveQ').textContent=b.q;
+  document.getElementById('resolve_pnl').value='';
+  document.getElementById('resolve_notes').value='';
+  document.getElementById('resolve_thesis').value='yes';
+  // Reset buttons
+  document.getElementById('resYesBtn').className='btn btn-lm btn-full';
+  document.getElementById('resNoBtn').className='btn btn-rd btn-full';
+  document.getElementById('resYesBtn').style.opacity='0.5';
+  document.getElementById('resNoBtn').style.opacity='0.5';
+  document.getElementById('resolveOv').classList.remove('hidden');
+}
+
+function setResolution(outcome){
+  _resolveOutcome=outcome;
+  document.getElementById('resYesBtn').style.opacity=outcome==='YES'?'1':'0.35';
+  document.getElementById('resNoBtn').style.opacity=outcome==='NO'?'1':'0.35';
+  // Auto-calculate PnL for real bets
+  const id=parseInt(document.getElementById('resolveId').value);
+  const bets=getBets();
+  const b=bets.find(x=>x.id===id);
+  if(b&&b.isReal){
+    const won=(b.dir==='YES'&&outcome==='YES')||(b.dir==='NO'&&outcome==='NO');
+    const mktPay=b.dir==='YES'?b.mktOdds:(100-b.mktOdds);
+    const autoPnl=won?Math.round(b.stake*(100/mktPay-1)):-b.stake;
+    document.getElementById('resolve_pnl').value=autoPnl;
+  }
+}
+
+function closeResolveModal(){document.getElementById('resolveOv').classList.add('hidden');_resolveOutcome=null;}
+
+async function saveResolution(){
+  if(!_resolveOutcome){toast('Select YES or NO first','warn');return;}
+  const id=parseInt(document.getElementById('resolveId').value);
+  const pnl=parseInt(document.getElementById('resolve_pnl').value)||0;
+  const notes=document.getElementById('resolve_notes').value.trim();
+  const thesisHeld=document.getElementById('resolve_thesis').value;
+
+  const bets=getBets();
+  const b=bets.find(x=>x.id===id);if(!b)return;
+  b.status='CLOSED';
+  b.outcome=_resolveOutcome;
+  b.pnl=b.isReal?pnl:0;
+  b.thesisHeld=thesisHeld;
+  b.resolvedAt=new Date().toISOString().split('T')[0];
+  saveBets(bets);
+
+  // Save outcome to Supabase — THIS is what trains the AI
+  if(K.sbU&&K.sbK&&b.sbId){
+    await sbInsert('pit_outcomes',{
+      verdict_id:b.sbId,
+      source:'pit',
+      resolved:_resolveOutcome,
+      pnl:b.isReal?pnl:null,
+      thesis_held:thesisHeld==='yes'||thesisHeld==='partial',
+      notes,
+      is_real:b.isReal,
+      days_held:b.date?Math.floor((new Date()-new Date(b.date))/(864e5)):null
+    });
+  }
+
+  closeResolveModal();renderBets();
+  const won=(b.dir==='YES'&&_resolveOutcome==='YES')||(b.dir==='NO'&&_resolveOutcome==='NO');
+  toast(b.isReal?(won?`✓ Won £${pnl} — outcome saved to AI memory`:`✗ Lost £${Math.abs(pnl)} — outcome saved to AI memory`):'Paper trade resolved — saved');
+
+  if(b.isReal){
+    await sendTg(`${won?'✅':'❌'} *PIT ${won?'WIN':'LOSS'}*
+
+${b.q.substring(0,70)}
+${b.dir} · ${won?'+':''}£${pnl} · Thesis: ${thesisHeld}`);
+  }
+}
+
+function deleteBet(id){
+  if(!confirm('Delete this bet record?'))return;
+  saveBets(getBets().filter(x=>x.id!==id));renderBets();
+}
+
+// ═══════════════════════════════════════════════════════
+// COACHING SESSION — manual trigger, reads full history
+// ═══════════════════════════════════════════════════════
+let coachHistory=[];
+
+async function openCoach(){
+  coachHistory=[];
+  document.getElementById('coachThread').innerHTML='';
+  document.getElementById('coachInput').value='';
+  document.getElementById('coachOv').classList.remove('hidden');
+  document.getElementById('coachLoad').style.display='flex';
+  document.getElementById('coachLoadT').textContent='Loading your bet history...';
+
+  try{
+    const calibProfile=await buildCalibProfile();
+    const bets=getBets();
+    const open=bets.filter(b=>b.status==='OPEN');
+    const closed=bets.filter(b=>b.status==='CLOSED');
+
+    // Build full history context
+    const historyCtx=closed.slice(0,20).map(b=>{
+      const won=(b.dir==='YES'&&b.outcome==='YES')||(b.dir==='NO'&&b.outcome==='NO');
+      return `${b.isReal?'REAL':'PAPER'} | ${b.mktType?.toUpperCase()} | ${b.dir} | Stated: ${b.dir==='YES'?b.myOdds:(100-b.myOdds)}% | Mkt: ${b.mktOdds}% | ${b.outcome?`${won?'WON':'LOST'} | Thesis: ${b.thesisHeld}`:''} | "${b.q.substring(0,50)}"`;
+    }).join('
+');
+
+    const openCtx=open.map(b=>{
+      const today=new Date();
+      const overdue=b.resDate&&new Date(b.resDate)<today;
+      return `${b.isReal?'REAL':'PAPER'} | ${b.mktType?.toUpperCase()} | ${b.dir} | Stated: ${b.dir==='YES'?b.myOdds:(100-b.myOdds)}% | ${overdue?'⚠ OVERDUE':'Open'} | "${b.q.substring(0,50)}"`;
+    }).join('
+');
+
+    const coachPrompt=`You are a prediction market coach reviewing this trader's full history. Be direct, specific, and honest.
+
+${calibProfile}
+
+CLOSED BETS (most recent first):
+${historyCtx||'None yet'}
+
+OPEN BETS:
+${openCtx||'None open'}
+
+Your job in this coaching session:
+1. Identify the single most important pattern in their accuracy data — be specific about numbers
+2. If there are overdue bets (resolution date passed), ask about each one directly — you need the outcome to update calibration
+3. Give one specific, actionable thing they should do differently on the NEXT bet
+4. If paper vs real divergence exists, address it directly
+
+Start by addressing overdue bets first if any exist. Then patterns. Then advice.
+Be a coach, not a cheerleader. If they have a systematic error, name it precisely.`;
+
+    const resp=await claude([{role:'user',content:coachPrompt}],null,2000,false);
+    coachHistory.push({role:'user',content:coachPrompt});
+    coachHistory.push({role:'assistant',content:resp});
+
+    document.getElementById('coachLoad').style.display='none';
+    addCoachMsg('claude',resp);
+  }catch(e){
+    document.getElementById('coachLoad').style.display='none';
+    addCoachMsg('claude',`Could not load coaching session: ${e.message}`);
+  }
+}
+
+function closeCoach(){document.getElementById('coachOv').classList.add('hidden');coachHistory=[];}
+
+async function sendCoachReply(){
+  const inp=document.getElementById('coachInput');
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value='';ar(inp);
+  addCoachMsg('user',msg);
+  coachHistory.push({role:'user',content:msg});
+  document.getElementById('coachLoad').style.display='flex';
+  document.getElementById('coachLoadT').textContent='Thinking...';
+
+  // Check if user is reporting a bet outcome in this message
+  // e.g. "The Hormuz bet resolved NO" — auto-prompt to log it
+  const isOutcomeReport=/resolved|won|lost|hit|missed|closed|expired/i.test(msg);
+
+  try{
+    const sysMsg=`You are a prediction market coach. Continue the coaching session.
+If the user reports an outcome for a bet, acknowledge it, ask them to tap RESOLVE on that bet in the log to save it to AI memory, and ask what they learned.
+If they ask what to do next, give one specific actionable recommendation.
+Keep responses under 150 words. Be direct.`;
+    const resp=await claude(coachHistory,sysMsg,600,false);
+    coachHistory.push({role:'assistant',content:resp});
+    document.getElementById('coachLoad').style.display='none';
+    addCoachMsg('claude',resp);
+    if(isOutcomeReport){
+      setTimeout(()=>addCoachMsg('system','💡 Remember to tap RESOLVE on this bet in your log to save the outcome to AI memory.'),500);
+    }
+  }catch(e){
+    document.getElementById('coachLoad').style.display='none';
+    addCoachMsg('claude','Error: '+e.message);
+  }
+}
+
+function addCoachMsg(role,text){
+  const el=document.getElementById('coachThread');
+  const isUser=role==='user';
+  const isSystem=role==='system';
+  const div=document.createElement('div');
+  div.className='coaching-msg';
+  if(isSystem){
+    div.innerHTML=`<div style="font-size:9px;color:var(--gd);background:var(--gddim);border:1px solid var(--gdbdr);border-radius:5px;padding:7px 10px;">${text}</div>`;
+  } else {
+    div.innerHTML=`
+      <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:${isUser?'var(--t2)':'var(--cy)'};margin-bottom:3px;">${isUser?'You':'PIT Coach'}</div>
+      <div class="${isUser?'':'coaching-q'}" style="${isUser?'background:var(--bg3);border:1px solid var(--b3);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t1);font-family:var(--sans);line-height:1.7;':''}">${isUser?text.replace(/</g,'&lt;'):fmt(text)}</div>`;
+  }
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+}
+
+function renderBets(){
+  const bets=getBets();
+  const open=bets.filter(b=>b.status==='OPEN');
+  const closed=bets.filter(b=>b.status==='CLOSED');
+
+  // ── Top-line stats ──
+  document.getElementById('statTotal').textContent=bets.length;
+  if(closed.length){
+    const wins=closed.filter(b=>b.pnl>0).length;
+    const pnl=closed.reduce((s,b)=>s+(b.pnl||0),0);
+    const edges=closed.map(b=>b.dir==='YES'?b.myOdds-b.mktOdds:(100-b.myOdds)-(100-b.mktOdds));
+    const avgEdge=edges.reduce((s,e)=>s+e,0)/edges.length;
+    const winPct=Math.round(wins/closed.length*100);
+    document.getElementById('statWin').textContent=winPct+'%';
+    document.getElementById('statWin').style.color=winPct>=55?'var(--lm)':winPct>=45?'var(--gd)':'var(--rd)';
+    document.getElementById('statPnl').textContent=(pnl>=0?'+':'')+'£'+pnl;
+    document.getElementById('statPnl').style.color=pnl>=0?'var(--lm)':'var(--rd)';
+    document.getElementById('statEdge').textContent=(avgEdge>=0?'+':'')+avgEdge.toFixed(1)+'pp';
+    document.getElementById('statEdge').style.color=avgEdge>=5?'var(--lm)':avgEdge>=2?'var(--gd)':'var(--rd)';
+  }
+
+  // ── Calibration tracker ──
+  if(closed.length>=3){
+    document.getElementById('calibCard').style.display='block';
+    const types={geo:{label:'Geopolitical',col:'var(--cy)'},tech:{label:'Tech / AI',col:'var(--gd)'},second:{label:'Second-Order',col:'var(--lm)'}};
+    let calibHtml='';
+    Object.entries(types).forEach(([key,meta])=>{
+      const typeBets=closed.filter(b=>b.mktType===key);
+      if(!typeBets.length){
+        calibHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1);">
+          <span style="font-size:10px;color:${meta.col};font-family:var(--mono);">${meta.label}</span>
+          <span style="font-size:9px;color:var(--t4);">No bets yet</span>
+        </div>`;
+        return;
+      }
+      const wins=typeBets.filter(b=>b.pnl>0).length;
+      const winPct=Math.round(wins/typeBets.length*100);
+      const avgMyOdds=Math.round(typeBets.reduce((s,b)=>s+(b.dir==='YES'?b.myOdds:(100-b.myOdds)),0)/typeBets.length);
+      const pnl=typeBets.reduce((s,b)=>s+(b.pnl||0),0);
+      // Calibration gap: difference between avg stated confidence and actual win rate
+      const calibGap=winPct-avgMyOdds;
+      let calibLabel,calibCol;
+      if(Math.abs(calibGap)<=5){calibLabel='Well calibrated';calibCol='var(--lm)';}
+      else if(calibGap<-5){calibLabel=`Overconfident by ${Math.abs(calibGap)}pp`;calibCol='var(--rd)';}
+      else{calibLabel=`Underconfident by ${calibGap}pp`;calibCol='var(--gd)';}
+      calibHtml+=`<div style="padding:10px 0;border-bottom:1px solid var(--b1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:10px;font-weight:700;color:${meta.col};font-family:var(--mono);">${meta.label}</span>
+          <span style="font-size:8px;color:${calibCol};font-family:var(--mono);">${calibLabel}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+          <div style="background:var(--bg);border-radius:4px;padding:6px 8px;">
+            <div style="font-size:7px;color:var(--t3);letter-spacing:1.5px;margin-bottom:2px;">BETS</div>
+            <div style="font-size:12px;font-weight:700;color:#fff;">${typeBets.length}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:4px;padding:6px 8px;">
+            <div style="font-size:7px;color:var(--t3);letter-spacing:1.5px;margin-bottom:2px;">WIN %</div>
+            <div style="font-size:12px;font-weight:700;color:${winPct>=55?'var(--lm)':winPct>=45?'var(--gd)':'var(--rd)'};">${winPct}%</div>
+          </div>
+          <div style="background:var(--bg);border-radius:4px;padding:6px 8px;">
+            <div style="font-size:7px;color:var(--t3);letter-spacing:1.5px;margin-bottom:2px;">AVG CONF</div>
+            <div style="font-size:12px;font-weight:700;color:var(--cy);">${avgMyOdds}%</div>
+          </div>
+          <div style="background:var(--bg);border-radius:4px;padding:6px 8px;">
+            <div style="font-size:7px;color:var(--t3);letter-spacing:1.5px;margin-bottom:2px;">P&L</div>
+            <div style="font-size:12px;font-weight:700;color:${pnl>=0?'var(--lm)':'var(--rd)'};">${pnl>=0?'+':''}£${pnl}</div>
+          </div>
+        </div>
+        <div style="margin-top:6px;">
+          <div style="height:3px;background:var(--b2);border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:${winPct}%;background:${meta.col};border-radius:2px;transition:width .4s;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:7px;color:var(--t4);">
+            <span>0%</span><span>Avg stated: ${avgMyOdds}%</span><span>100%</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    // Overall calibration warning if fewer than 20 bets
+    if(closed.length<20){
+      calibHtml+=`<div style="padding:8px 0;font-size:9px;color:var(--am);line-height:1.7;font-family:var(--sans);">
+        ${closed.length}/20 bets logged. Keep going — calibration data gets meaningful after 20 closed bets. Avoid slow political markets until then.
+      </div>`;
+    } else {
+      calibHtml+=`<div style="padding:8px 0;font-size:9px;color:var(--lm);line-height:1.7;font-family:var(--sans);">
+        ✓ 20+ bets logged. Your calibration data is meaningful. Review before sizing up.
+      </div>`;
+    }
+    document.getElementById('calibData').innerHTML=calibHtml;
+  }
+
+  // Open bets
+  if(!open.length){
+    document.getElementById('openBets').innerHTML='<div class="empty"><div class="ei">◎</div>No open bets — tap + LOG BET</div>';
+  }else{
+    document.getElementById('openBets').innerHTML=open.map(b=>{
+      const edgePp=b.dir==='YES'?b.myOdds-b.mktOdds:(100-b.myOdds)-(100-b.mktOdds);
+      const ec=edgePp>=7?'edge-strong':edgePp>=3?'edge-moderate':'edge-none';
+      const mktPay=b.dir==='YES'?b.mktOdds:(100-b.mktOdds);
+      const potProfit=Math.round(b.stake*(100/mktPay-1));
+      return `<div class="bet-item">
+        <div class="bet-q">${b.q}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+          <div class="bet-dir ${b.dir.toLowerCase()}">${b.dir}</div>
+          ${b.isReal?`<span style="font-size:8px;background:var(--lmdim);border:1px solid var(--lmbdr);color:var(--lm);padding:1px 6px;border-radius:3px;">REAL · £${b.stake}</span>`:`<span style="font-size:8px;background:var(--gddim);border:1px solid var(--gdbdr);color:var(--gd);padding:1px 6px;border-radius:3px;">PAPER</span>`}
+          ${b.isReal?`<span style="font-size:9px;color:var(--lm);">→ +£${potProfit} if wins</span>`:''}
+          <span class="edge-badge ${ec}">Edge: ${edgePp>=0?'+':''}${edgePp.toFixed(1)}pp</span>
+          <span class="res-score rs-${b.resRisk}">RR:${b.resRisk}</span>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-bottom:6px;line-height:1.6;">
+          Market: YES ${b.mktOdds}% · Your P: ${b.myOdds}% · ${b.date}
+          ${b.edge?`<br>"${b.edge}"`:''}</div>
+        ${b.exit?`<div style="font-size:8px;color:var(--am);margin-bottom:6px;">Exit if: ${b.exit}</div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-lm btn-sm" onclick="openResolveModal(${b.id})">◎ RESOLVE</button>
+          <button class="btn btn-cy btn-sm" onclick="recheckBet(${b.id})">↻ Recheck</button>
+          <button class="btn btn-gh btn-sm" onclick="deleteBet(${b.id})" style="color:var(--rd);">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Closed
+  if(!closed.length){
+    document.getElementById('closedBets').innerHTML='<div class="empty"><div class="ei">▲</div>No closed bets yet — track record builds here</div>';
+  }else{
+    const totalPnl=closed.reduce((s,b)=>s+(b.pnl||0),0);
+    document.getElementById('closedBets').innerHTML=
+      `<div style="padding:8px 0;border-bottom:1px solid var(--b1);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:8px;color:var(--t3);letter-spacing:2px;">TOTAL REALISED P&L</span>
+        <span style="font-family:var(--disp);font-size:18px;color:${totalPnl>=0?'var(--lm)':'var(--rd)'};">${totalPnl>=0?'+':''}£${totalPnl}</span>
+      </div>`+
+      closed.map(b=>{
+        const won=b.pnl>0;
+        const edgePp=b.dir==='YES'?b.myOdds-b.mktOdds:(100-b.myOdds)-(100-b.mktOdds);
+        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--b1);">
+          <div style="flex:1;margin-right:10px;">
+            <div style="font-size:10px;color:var(--t1);line-height:1.4;margin-bottom:2px;font-family:var(--sans);">${b.q.substring(0,55)}${b.q.length>55?'…':''}</div>
+            <div style="font-size:8px;color:var(--t3);">${b.dir} · £${b.stake} · edge was ${edgePp>=0?'+':''}${edgePp.toFixed(1)}pp · ${b.date}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:14px;font-weight:700;color:${won?'var(--lm)':'var(--rd)'};">${b.pnl>=0?'+':''}£${b.pnl}</div>
+            <div style="font-size:8px;color:${won?'var(--lm)':'var(--rd)'};">${won?'WON':'LOST'}</div>
+          </div>
+        </div>`;
+      }).join('');
+  }
+}
+
+// Recheck open bet with live search
+async function recheckBet(id){
+  const bets=getBets();
+  const b=bets.find(x=>x.id===id);if(!b)return;
+  toast('Searching current odds...');
+  try{
+    const resp=await claude(
+      [{role:'user',content:`Search polymarket.com for this market and give me a 3-line update.
+Market: "${b.q}"
+My position: ${b.dir} at market odds ${b.mktOdds}%, my true P estimate ${b.myOdds}%
+
+Find: current YES odds, any relevant news from last 24h, is my thesis still intact?
+Format: Current odds: X% | News: [one sentence] | Thesis: [INTACT/WEAKENING/BROKEN]`}],
+      null, 500, true
+    );
+    toast(resp.substring(0,80));
+    // Show result inline
+    const betEls=document.querySelectorAll('.bet-item');
+    betEls.forEach(el=>{
+      if(el.querySelector('.bet-q')?.textContent===b.q){
+        const existing=el.querySelector('.recheck-result');
+        if(existing)existing.remove();
+        const div=document.createElement('div');
+        div.className='recheck-result';
+        div.style.cssText='font-size:9px;color:var(--cy);background:var(--cydim);border:1px solid var(--cybdr);border-radius:4px;padding:6px 9px;margin-bottom:6px;line-height:1.6;font-family:var(--sans);';
+        div.textContent='↻ '+resp.substring(0,200);
+        el.insertBefore(div,el.querySelector('div[style*="display:flex;gap:6px"]'));
+      }
+    });
+  }catch(e){toast('Recheck failed: '+e.message,'err');}
+}
+
+// ═══════════════════════════════════════════════════════
+// PROMPTS TAB
+// ═══════════════════════════════════════════════════════
+function showPrompt(key){
+  activePromptKey=key;
+  const configs={
+    scan:{tabId:'ptab-scan',cls:'btn-cy'},
+    analyse:{tabId:'ptab-analyse',cls:'btn-lm'},
+  };
+  Object.entries(configs).forEach(([k,v])=>{
+    const el=document.getElementById(v.tabId);if(!el)return;
+    el.className=`btn btn-sm${k===key?' '+v.cls:' btn-gh'}`;
+    el.style.cssText='flex-direction:column;gap:3px;padding:10px 8px;height:auto;';
+  });
+  const p=PROMPTS[key];
+  if(!p)return;
+  document.getElementById('promptCardTitle').textContent=p.label;
+  document.getElementById('promptCardTitle').style.color=p.color;
+  document.getElementById('promptText').textContent=p.text;
+}
+
+function copyActivePrompt(){
+  const p=PROMPTS[activePromptKey];
+  if(!p)return;
+  navigator.clipboard.writeText(p.text);
+  toast('Copied');
+  const btn=document.getElementById('btnCopyPrompt');
+  btn.textContent='✓ COPIED';
+  setTimeout(()=>{btn.textContent='⎘ COPY';},2000);
+}
+
+function renderReference(){
+  // Resolution scale
+  document.getElementById('resScaleList').innerHTML=RES_SCALE.map(r=>`
+    <div class="rs-row">
+      <div class="rs-num" style="color:${r.col};">${r.score}</div>
+      <div class="rs-label" style="color:${r.col};">${r.label}</div>
+      <div class="rs-desc">${r.desc}</div>
+    </div>`).join('');
+
+  // Edge types
+  document.getElementById('edgeTypeList').innerHTML=EDGE_TYPES.map((e,i)=>`
+    <div style="padding:9px 0;border-bottom:${i<EDGE_TYPES.length-1?'1px solid var(--b1)':'none'};">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <div style="font-size:10px;font-weight:700;color:${e.col};font-family:var(--mono);">${e.type}</div>
+        <span style="font-size:7px;color:${e.col};border:1px solid ${e.col};padding:1px 6px;border-radius:2px;opacity:.7;">${e.speed}</span>
+      </div>
+      <div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">${e.desc}</div>
+    </div>`).join('');
+
+  // Stake tiers
+  document.getElementById('stakeTierList').innerHTML=
+    `<div style="display:grid;grid-template-columns:100px 50px 70px 60px 45px;font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;padding:6px 0;border-bottom:1px solid var(--b1);">
+      <span>Verdict</span><span>Edge</span><span>Confidence</span><span>Res Risk</span><span>Stake</span>
+    </div>`+
+    STAKE_TIERS.map(s=>`
+    <div style="display:grid;grid-template-columns:100px 50px 70px 60px 45px;padding:8px 0;border-bottom:1px solid var(--b1);align-items:center;">
+      <span style="font-size:10px;font-weight:700;color:${s.col};font-family:var(--mono);">${s.verdict}</span>
+      <span style="font-size:10px;color:var(--t2);">${s.edge}</span>
+      <span style="font-size:10px;color:var(--t2);">${s.conf}</span>
+      <span style="font-size:10px;color:var(--t2);">${s.res}</span>
+      <span style="font-size:12px;font-weight:700;color:${s.stake==='£0'?'var(--rd)':'var(--lm)'};">${s.stake}</span>
+    </div>`).join('');
+
+  // Rules
+  document.getElementById('rulesList').innerHTML=RULES.map((r,i)=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:${i<RULES.length-1?'1px solid var(--b1)':'none'};">
+      <span style="font-size:8px;color:var(--cy);min-width:24px;padding-top:1px;font-family:var(--mono);">R${String(i+1).padStart(2,'0')}</span>
+      <span style="font-size:11px;color:var(--t2);line-height:1.6;font-family:var(--sans);">${r}</span>
+    </div>`).join('');
+
+  // Scanner stack
+  document.getElementById('scannerList').innerHTML=SCANNER_STACK.map((s,i)=>{
+    const sc={'Minutes':'var(--rd)','Hours':'var(--gd)','Daily':'var(--cy)'}[s.speed]||'var(--t3)';
+    return `<div style="display:grid;grid-template-columns:70px 120px 1fr;gap:10px;padding:10px 0;border-bottom:${i<SCANNER_STACK.length-1?'1px solid var(--b1)':'none'};align-items:flex-start;">
+      <span style="font-size:7px;color:${sc};border:1px solid ${sc};padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);">${s.speed}</span>
+      <span style="font-size:10px;font-weight:700;color:var(--t1);font-family:var(--mono);">${s.name}</span>
+      <span style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">${s.how}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// TELEGRAM
+// ═══════════════════════════════════════════════════════
+async function sendTg(msg){
+  if(!K.tgt||!K.tgc)return false;
+  try{
+    const r=await fetch(`https://api.telegram.org/bot${K.tgt}/sendMessage`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:K.tgc,text:msg,parse_mode:'Markdown'})
+    });
+    return r.ok;
+  }catch{return false;}
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function renderResearchMsg(role,text){
+  const isUser=role==='user';
+  const label=isUser?'You':'PIT Analyst';
+  const col=isUser?'var(--t2)':'var(--cy)';
+  const bg=isUser?'var(--bg3)':'var(--bg2)';
+  const border=isUser?'var(--b3)':'var(--b2)';
+  return `<div class="research-msg">
+    <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:${col};margin-bottom:4px;">${label}</div>
+    <div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.7;font-family:var(--sans);color:var(--t1);white-space:pre-wrap;">${text.replace(/</g,'&lt;')}</div>
+  </div>`;
+}
+
+function getVerdict(text){
+  const section=text.match(/##\s*BET RECOMMENDATION[^\n]*\n([^\n]+)/i)?.[1]||
+                text.match(/Verdict:\s*([^\n]+)/i)?.[1]||
+                text.substring(0,300);
+  if(/STRONG BET/i.test(section))return 'STRONG BET';
+  if(/HARD PASS/i.test(section))return 'HARD PASS';
+  if(/\bPASS\b/i.test(section))return 'PASS';
+  if(/MARGINAL/i.test(section))return 'MARGINAL';
+  if(/\bBET\b/i.test(section))return 'BET';
+  return 'WATCHLIST';
+}
+
+function verdictClass(v){
+  return{'STRONG BET':'vb-sb','BET':'vb-b','MARGINAL':'vb-m','PASS':'vb-p','HARD PASS':'vb-p','WATCHLIST':'vb-m'}[v]||'vb-m';
+}
+
+function fmt(t){
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/## ([^\n]+)/g,'<h2>$1</h2>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*?<\/li>\n?)+/gs,m=>'<ul>'+m+'</ul>')
+    .split('\n').map(l=>l.startsWith('<')||!l.trim()?l:`<p>${l}</p>`).join('\n');
+}
+
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+
+let tT;
+function toast(msg,type=''){
+  const el=document.getElementById('toast');el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('show'),2800);
+}
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function renderResearchMsg(role,text){
+  const isUser=role==='user';
+  const label=isUser?'You':'PIT Analyst';
+  const col=isUser?'var(--t2)':'var(--cy)';
+  const bg=isUser?'var(--bg3)':'var(--bg2)';
+  const border=isUser?'var(--b3)':'var(--b2)';
+  const hasGeminiBrief=text.includes('GEMINI BRIEF')||text.includes('Research tasks')||text.length>600;
+  let copyBtn='';
+  if(!isUser&&hasGeminiBrief){
+    copyBtn=`<button class="btn btn-gd btn-sm" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied — paste into Gemini 2.0 Pro')" style="margin-top:8px;">⎘ COPY GEMINI BRIEF</button>`;
+  }
+  return `<div class="research-msg">
+    <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:${col};margin-bottom:4px;">${label}</div>
+    <div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.7;font-family:var(--sans);color:var(--t1);white-space:pre-wrap;">${text}</div>
+    ${copyBtn}
+  </div>`;
+}
+
+function getVerdict(text){
+  const section=text.match(/##\s*BET RECOMMENDATION[^\n]*\n([^\n]+)/i)?.[1]||
+                text.match(/##\s*VERDICT[^\n]*\n([^\n]+)/i)?.[1]||
+                text.substring(0,300);
+  if(/STRONG BET/i.test(section))return 'STRONG BET';
+  if(/HARD PASS/i.test(section))return 'HARD PASS';
+  if(/\bBET\b/i.test(section)&&!/PASS/i.test(section))return 'BET';
+  if(/MARGINAL/i.test(section))return 'MARGINAL';
+  if(/\bPASS\b/i.test(section))return 'PASS';
+  return 'WATCHLIST';
+}
+function verdictClass(v){
+  return{
+    'STRONG BET':'vb-sb','BET':'vb-b','MARGINAL':'vb-m',
+    'PASS':'vb-p','HARD PASS':'vb-p','WATCHLIST':'vb-m'
+  }[v]||'vb-m';
+}
+
+function fmt(t){
+  return t.replace(/## ([^\n]+)/g,'<h2>$1</h2>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*?<\/li>\n?)+/gs,m=>'<ul>'+m+'</ul>')
+    .split('\n').map(l=>l.startsWith('<')||!l.trim()?l:`<p>${l}</p>`).join('\n');
+}
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+let tT;
+function toast(msg,type=''){
+  const el=document.getElementById('toast');el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(tT);tT=setTimeout(()=>el.classList.remove('show'),2800);
+}
+function sl(ms){return new Promise(r=>setTimeout(r,ms));}
+</script>
+</body>
+</html>
