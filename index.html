@@ -1992,7 +1992,8 @@ For each opportunity found, return ONLY this exact JSON format inside <signals> 
     "rr": 2,
     "edge": "slow_update|second_order|info_lag",
     "speed": "Hours|Days",
-    "thesis": "One sentence: what the market hasn't priced yet and why you're early"
+    "thesis": "One sentence: what the market hasn't priced yet and why you're early",
+    "resDate": "resolution date in YYYY-MM-DD format, or empty string if unknown"
   }
 ]
 </signals>
@@ -2003,6 +2004,7 @@ Rules:
 - type: geo = geopolitical, tech = tech/AI/corporate, second = second-order consequence
 - edge: which of the 3 edge types applies
 - thesis: must explain WHY this is early — what information is not yet in the price
+- resDate: always search for the exact resolution date on polymarket.com
 - Minimum 3 markets, maximum 8 markets
 - ONLY include markets where the edge is genuinely early — you are looking for the crowd who hasn't arrived yet`;
 
@@ -2050,7 +2052,8 @@ For each related market, return ONLY this exact JSON inside <signals> tags:
     "rr": 2,
     "edge": "slow_update|second_order|info_lag",
     "speed": "Hours|Days",
-    "thesis": "One sentence: what this signal means for this market and why you're early"
+    "thesis": "One sentence: what this signal means for this market and why you're early",
+    "resDate": "resolution date in YYYY-MM-DD format, or empty string if unknown"
   }
 ]
 </signals>
@@ -2059,6 +2062,7 @@ Rules:
 - conviction 1-10, only include >= 5
 - rr 1-5, exclude >= 4
 - Focus on second-order markets — not just the obvious first-order bet
+- Always search polymarket.com for exact resolution dates
 - Order by conviction descending`;
 
     const resp = await claude([{role:'user', content: prompt}], SYS, 3000, true, false);
@@ -2111,16 +2115,19 @@ function parseAndRenderSignals(resp, source){
     '<div style="font-size:8px;color:var(--t4);margin-bottom:8px;font-family:var(--mono);">'+signals.length+' EARLY EDGES FOUND — '+source+' — tap to analyse</div>' +
     signals.map((s,i) => {
       const col = typeCol[s.type] || 'var(--cy)';
-      return '<div class="sig-card '+s.type+'" data-type="'+s.type+'" data-conv="'+s.conviction+'" onclick="openSignalAnalysis('+JSON.stringify(JSON.stringify(s))+')" style="border-left-color:'+col+';">'
+      const safeJson = JSON.stringify(JSON.stringify(s));
+      return '<div class="sig-card '+s.type+'" data-type="'+s.type+'" data-conv="'+s.conviction+'" style="border-left-color:'+col+';" >'
         + '<div class="sig-q">'+s.q+'</div>'
         + (s.thesis ? '<div class="sig-thesis">'+s.thesis+'</div>' : '')
-        + '<div class="sig-meta">'
+        + '<div class="sig-meta" style="margin-bottom:8px;">'
         + '<span class="conv-badge '+convClass(s.conviction)+'">'+s.conviction+'/10</span>'
         + '<span class="edge-tag" style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;">'+( edgeLbl[s.edge]||s.edge)+'</span>'
         + '<span class="rr-tag" style="color:'+rrCol(s.rr)+';border:1px solid '+rrCol(s.rr)+'44;background:'+rrCol(s.rr)+'11;">RR: '+s.rr+'</span>'
         + '<span style="font-size:8px;color:'+speedCol(s.speed)+';font-family:var(--mono);">'+s.speed+'</span>'
         + '<span style="font-size:8px;color:var(--t3);margin-left:auto;font-family:var(--mono);">'+s.odds+'</span>'
         + '</div>'
+        + (s.resDate ? '<div style="font-size:8px;color:var(--t3);font-family:var(--mono);margin-bottom:8px;">Resolves: '+s.resDate+'</div>' : '')
+        + '<button class="btn btn-cy btn-sm" style="width:100%;" onclick="openSignalAnalysis('+safeJson+')">⚡ ANALYSE THIS MARKET</button>'
         + '</div>';
     }).join('');
 
@@ -2136,15 +2143,19 @@ function openSignalAnalysis(signalJson){
 
   // Pre-fill analyse tab
   document.getElementById('mktQ').value = s.q || '';
-  // Extract YES odds number
   const oddsMatch = (s.odds||'').match(/(\d+)/);
   if(oddsMatch) document.getElementById('mktYes').value = oddsMatch[1];
   document.getElementById('mktWhy').value = s.thesis || '';
   document.getElementById('mktGemini').value = '';
-
+  // Fill resolution date if available
+  if(s.resDate && document.getElementById('mktDate')){
+    document.getElementById('mktDate').value = s.resDate;
+  }
   // Navigate to analyse tab
   nav('analyse');
-  toast('Market loaded — tap RUN FULL ANALYSIS');
+  // Scroll to top
+  window.scrollTo(0,0);
+  toast('Loaded — tap RUN FULL ANALYSIS');
 }
 
 // Keep renderReference as no-op since the elements no longer exist
