@@ -106,6 +106,25 @@ body{background:var(--bg);color:var(--t1);font-family:var(--mono);min-height:100
 .edge-moderate{background:var(--gddim);color:var(--gd);border:1px solid var(--gdbdr);}
 .edge-none{background:var(--bg3);color:var(--t3);border:1px solid var(--b3);}
 
+/* SIGNAL FEED */
+.sig-card{background:var(--bg2);border:1px solid var(--b2);border-radius:8px;padding:13px 14px;margin-bottom:9px;cursor:pointer;transition:border-color .15s;border-left:3px solid var(--b3);}
+.sig-card:active{background:var(--bg3);}
+.sig-card.geo{border-left-color:var(--cy);}
+.sig-card.tech{border-left-color:var(--gd);}
+.sig-card.second{border-left-color:var(--lm);}
+.sig-card.hidden{display:none;}
+.sig-q{font-size:11px;color:var(--t1);line-height:1.5;font-family:var(--sans);margin-bottom:8px;}
+.sig-thesis{font-size:10px;color:var(--cy);font-style:italic;padding:4px 8px;background:var(--cydim);border-left:2px solid var(--cybdr);border-radius:0 3px 3px 0;margin-bottom:8px;line-height:1.5;}
+.sig-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.conv-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:3px;font-family:var(--mono);}
+.conv-high{background:var(--lmdim);color:var(--lm);border:1px solid var(--lmbdr);}
+.conv-med{background:var(--gddim);color:var(--gd);border:1px solid var(--gdbdr);}
+.conv-low{background:var(--bg3);color:var(--t3);border:1px solid var(--b3);}
+.edge-tag{font-size:7px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:2px;font-family:var(--mono);}
+.rr-tag{font-size:8px;font-weight:700;padding:2px 7px;border-radius:3px;font-family:var(--mono);}
+.sig-filter{white-space:nowrap;flex-shrink:0;}
+.active-filter{background:var(--cy)!important;color:var(--bg)!important;border-color:var(--cy)!important;}
+
 /* BET LOG */
 .bet-item{padding:12px 0;border-bottom:1px solid var(--b1);}
 .bet-item:last-child{border-bottom:none;}
@@ -444,90 +463,42 @@ If you haven't run Gemini yet:
 </div>
 
 <!-- ═══════════════════════════════════════
-     PANEL: PROMPTS — Reference & copy
+     PANEL: SIGNALS — Live market scanner
 ═══════════════════════════════════════ -->
 <div class="panel" id="panel-prompts">
 <div style="padding-top:12px;">
-  <div class="ph"><div><div class="pt">PROMPT <span>LIBRARY</span></div><div class="ps">3-step framework · Copy & use</div></div></div>
+  <div class="ph">
+    <div><div class="pt">SIGNAL <span>FEED</span></div><div class="ps">Live markets · Early edge only · Tap to analyse</div></div>
+  </div>
 
-  <!-- Workflow -->
+  <!-- Auto-scan + manual input -->
   <div class="card">
-    <div class="ct">3-Step Workflow</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <div style="font-size:9px;color:var(--cy);font-family:var(--mono);min-width:24px;padding-top:1px;">S01</div>
-        <div><div style="font-size:10px;font-weight:700;color:var(--cy);margin-bottom:2px;font-family:var(--mono);">SCAN FOR MARKETS</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Paste signal → Claude parses first/second/third-order effects → identifies relevant markets → scores resolution risk → generates Gemini brief</div></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <div style="font-size:9px;color:var(--gd);font-family:var(--mono);min-width:24px;padding-top:1px;">S02</div>
-        <div><div style="font-size:10px;font-weight:700;color:var(--gd);margin-bottom:2px;font-family:var(--mono);">GEMINI RESEARCHES</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Copy brief → Gemini 2.0 Pro (grounding on) → pulls live odds, primary sources, base rates, decision-maker positions, resolution criteria</div></div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:flex-start;">
-        <div style="font-size:9px;color:var(--lm);font-family:var(--mono);min-width:24px;padding-top:1px;">S03</div>
-        <div><div style="font-size:10px;font-weight:700;color:var(--lm);margin-bottom:2px;font-family:var(--mono);">ANALYSE A MARKET</div><div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">Paste Gemini output → full probability analysis → edge calculation → resolution risk score → stake recommendation → monitoring plan</div></div>
-      </div>
+    <div style="display:flex;gap:7px;margin-bottom:10px;">
+      <button class="btn btn-cy" style="flex:1;" id="btnAutoScan" onclick="runAutoScan()">◎ AUTO-SCAN NOW</button>
+      <button class="btn btn-gh btn-sm" onclick="toggleSignalInput()" id="btnToggleInput">+ PASTE</button>
     </div>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);font-size:9px;color:var(--t3);line-height:1.9;font-family:var(--mono);">
-      <span style="color:var(--cy);">Claude</span> = strategy brain &amp; analysis &nbsp;·&nbsp;
-      <span style="color:var(--gd);">Gemini</span> = live research engine &nbsp;·&nbsp;
-      <span style="color:var(--lm);">You</span> = signal source &amp; final decision
+    <div id="signalInputArea" style="display:none;">
+      <textarea class="pb" id="signalPasteIn" placeholder="Paste a headline, article, or observation...&#10;&#10;Claude will find every related Polymarket market, score them, and rank by edge." style="min-height:90px;margin-bottom:8px;"></textarea>
+      <button class="btn btn-cy btn-full" id="btnPasteSignal" onclick="runPasteSignal()">◎ FIND MARKETS</button>
     </div>
   </div>
 
-  <!-- Prompt tabs -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;" id="promptTabs">
-    <button onclick="showPrompt('scan')" id="ptab-scan" class="btn btn-cy btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
-      <span style="font-size:14px;">◎</span><span>SCAN</span>
-    </button>
-    <button onclick="showPrompt('gemini')" id="ptab-gemini" class="btn btn-gh btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
-      <span style="font-size:14px;">◈</span><span>GEMINI</span>
-    </button>
-    <button onclick="showPrompt('analyse')" id="ptab-analyse" class="btn btn-gh btn-sm" style="flex-direction:column;gap:3px;padding:10px 8px;height:auto;">
-      <span style="font-size:14px;">⚡</span><span>ANALYSE</span>
-    </button>
+  <!-- Filter bar -->
+  <div style="display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;">
+    <button class="btn btn-cy btn-sm sig-filter active-filter" id="sf-all" onclick="filterSignals('all')">ALL</button>
+    <button class="btn btn-gh btn-sm sig-filter" id="sf-geo" onclick="filterSignals('geo')">GEO</button>
+    <button class="btn btn-gh btn-sm sig-filter" id="sf-tech" onclick="filterSignals('tech')">TECH</button>
+    <button class="btn btn-gh btn-sm sig-filter" id="sf-second" onclick="filterSignals('second')">2ND ORDER</button>
+    <button class="btn btn-gh btn-sm sig-filter" id="sf-high" onclick="filterSignals('high')">HIGH CONV</button>
   </div>
 
-  <div class="card" id="promptCard">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="ct" style="margin-bottom:0;" id="promptCardTitle">◎ SCAN FOR MARKETS</div>
-      <button class="btn btn-gh btn-sm" id="btnCopyPrompt" onclick="copyActivePrompt()">⎘ COPY</button>
-    </div>
-    <div class="prompt-pre" id="promptText"></div>
-  </div>
+  <div class="loading" id="sigFeedLoad" style="display:none;"><div class="spin"></div><span id="sigFeedLoadT">Scanning Polymarket + breaking news...</span></div>
 
-  <!-- Reference: Resolution risk -->
-  <div class="card">
-    <div class="ct">Resolution Risk Scale — Check Every Market</div>
-    <div id="resScaleList"></div>
-    <div style="margin-top:10px;padding:9px 12px;background:var(--rdim);border:1px solid var(--rbdr);border-radius:5px;font-size:9px;color:var(--rd);line-height:1.7;">
-      Score 4 or 5 = automatic PASS. Research the exact resolution criteria on polymarket.com BEFORE running analysis.
-    </div>
-  </div>
+  <!-- Signal cards list -->
+  <div id="signalFeed"><div class="empty"><div class="ei">◎</div>Tap AUTO-SCAN to find early edges now</div></div>
 
-  <!-- Reference: Edge types -->
-  <div class="card">
-    <div class="ct">4 Edge Types</div>
-    <div style="display:flex;flex-direction:column;gap:0;" id="edgeTypeList"></div>
-  </div>
-
-  <!-- Reference: Stake sizing -->
-  <div class="card">
-    <div class="ct">Stake Sizing — Learning Phase</div>
-    <div style="font-size:9px;color:var(--t3);margin-bottom:8px;line-height:1.6;">Never exceed £50 per bet until you have 20+ bets of track record.</div>
-    <div id="stakeTierList"></div>
-  </div>
-
-  <!-- Non-negotiable rules -->
-  <div class="card">
-    <div class="ct">Non-Negotiable Rules</div>
-    <div id="rulesList"></div>
-  </div>
-
-  <!-- Scanner stack -->
-  <div class="card">
-    <div class="ct">Free News Scanner Stack</div>
-    <div id="scannerList"></div>
-  </div>
+  <!-- Last scan time -->
+  <div id="lastScanTime" style="font-size:8px;color:var(--t4);text-align:center;margin-top:8px;font-family:var(--mono);"></div>
 </div>
 </div>
 
@@ -539,7 +510,7 @@ If you haven't run Gemini yet:
   <button class="nb" onclick="nav('analyse')" id="nav-analyse"><div class="nbi"></div><div class="ni">⚡</div><div class="nl">Analyse</div></button>
   <button class="nb" onclick="nav('chat')" id="nav-chat"><div class="nbi"></div><div class="ni">💬</div><div class="nl">Chat</div></button>
   <button class="nb" onclick="nav('bets')" id="nav-bets"><div class="nbi"></div><div class="ni">📊</div><div class="nl">Bets</div></button>
-  <button class="nb" onclick="nav('prompts')" id="nav-prompts"><div class="nbi"></div><div class="ni">◈</div><div class="nl">Prompts</div></button>
+  <button class="nb" onclick="nav('prompts')" id="nav-prompts"><div class="nbi"></div><div class="ni">◎</div><div class="nl">Signals</div></button>
 </div>
 
 <!-- KEYS MODAL -->
@@ -951,8 +922,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   setInterval(()=>{document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});},1000);
   document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('bet_date').value=new Date().toISOString().split('T')[0];
-  renderReference();
-  showPrompt('scan');
   renderBets();
 });
 
@@ -1964,86 +1933,222 @@ Format: Current odds: X% | News: [one sentence] | Thesis: [INTACT/WEAKENING/BROK
 }
 
 // ═══════════════════════════════════════════════════════
-// PROMPTS TAB
+// SIGNAL FEED TAB
 // ═══════════════════════════════════════════════════════
-function showPrompt(key){
-  activePromptKey=key;
-  const configs={
-    scan:{tabId:'ptab-scan',cls:'btn-cy'},
-    analyse:{tabId:'ptab-analyse',cls:'btn-lm'},
-  };
-  Object.entries(configs).forEach(([k,v])=>{
-    const el=document.getElementById(v.tabId);if(!el)return;
-    el.className=`btn btn-sm${k===key?' '+v.cls:' btn-gh'}`;
-    el.style.cssText='flex-direction:column;gap:3px;padding:10px 8px;height:auto;';
+let _allSignalCards = [];
+let _activeFilter = 'all';
+
+function toggleSignalInput(){
+  const area = document.getElementById('signalInputArea');
+  const btn = document.getElementById('btnToggleInput');
+  const isHidden = area.style.display === 'none';
+  area.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? '✕ CLOSE' : '+ PASTE';
+}
+
+function filterSignals(type){
+  _activeFilter = type;
+  document.querySelectorAll('.sig-filter').forEach(b => b.classList.remove('active-filter'));
+  const activeBtn = document.getElementById('sf-'+type);
+  if(activeBtn) activeBtn.classList.add('active-filter');
+  document.querySelectorAll('.sig-card').forEach(card => {
+    if(type === 'all'){
+      card.classList.remove('hidden');
+    } else if(type === 'high'){
+      const conv = parseInt(card.dataset.conv || 0);
+      card.classList.toggle('hidden', conv < 7);
+    } else {
+      card.classList.toggle('hidden', card.dataset.type !== type);
+    }
   });
-  const p=PROMPTS[key];
-  if(!p)return;
-  document.getElementById('promptCardTitle').textContent=p.label;
-  document.getElementById('promptCardTitle').style.color=p.color;
-  document.getElementById('promptText').textContent=p.text;
 }
 
-function copyActivePrompt(){
-  const p=PROMPTS[activePromptKey];
-  if(!p)return;
-  navigator.clipboard.writeText(p.text);
-  toast('Copied');
-  const btn=document.getElementById('btnCopyPrompt');
-  btn.textContent='✓ COPIED';
-  setTimeout(()=>{btn.textContent='⎘ COPY';},2000);
+async function runAutoScan(){
+  const btn = document.getElementById('btnAutoScan');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:5px;display:inline-block;"></div>Scanning...';
+  document.getElementById('sigFeedLoad').style.display = 'flex';
+  document.getElementById('sigFeedLoadT').textContent = 'Searching Polymarket + breaking news...';
+  document.getElementById('signalFeed').innerHTML = '';
+
+  try{
+    const prompt = `You have live web search. Use it now — search ALL of these before responding:
+
+1. Search polymarket.com for markets with highest volume and biggest odds movements in last 24 hours
+2. Search for breaking geopolitical news right now (Reuters, AP, BBC) — last 6 hours
+3. Search for breaking tech/AI/corporate news right now — last 6 hours
+4. Cross-reference: which breaking news stories have related Polymarket markets that haven't moved yet?
+
+YOUR ONLY JOB: Find markets where there is an EARLY edge — where the odds have NOT yet adjusted to recent information. Do not list markets that are already correctly priced.
+
+For each opportunity found, return ONLY this exact JSON format inside <signals> tags:
+<signals>
+[
+  {
+    "q": "Exact Polymarket market question",
+    "odds": "YES: X%",
+    "type": "geo|tech|second",
+    "conviction": 8,
+    "rr": 2,
+    "edge": "slow_update|second_order|info_lag",
+    "speed": "Hours|Days",
+    "thesis": "One sentence: what the market hasn't priced yet and why you're early"
+  }
+]
+</signals>
+
+Rules:
+- conviction: 1-10 (only include markets with conviction >= 5)
+- rr: resolution risk 1-5 (exclude any market with rr >= 4)
+- type: geo = geopolitical, tech = tech/AI/corporate, second = second-order consequence
+- edge: which of the 3 edge types applies
+- thesis: must explain WHY this is early — what information is not yet in the price
+- Minimum 3 markets, maximum 8 markets
+- ONLY include markets where the edge is genuinely early — you are looking for the crowd who hasn't arrived yet`;
+
+    const resp = await claude([{role:'user', content: prompt}], SYS, 3000, true, false);
+    parseAndRenderSignals(resp, 'AUTO-SCAN');
+  } catch(e){
+    document.getElementById('signalFeed').innerHTML = '<div class="err">Scan failed: '+e.message+'</div>';
+  } finally {
+    document.getElementById('sigFeedLoad').style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '◎ AUTO-SCAN NOW';
+    document.getElementById('lastScanTime').textContent = 'Last scan: ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
 }
 
-function renderReference(){
-  // Resolution scale
-  document.getElementById('resScaleList').innerHTML=RES_SCALE.map(r=>`
-    <div class="rs-row">
-      <div class="rs-num" style="color:${r.col};">${r.score}</div>
-      <div class="rs-label" style="color:${r.col};">${r.label}</div>
-      <div class="rs-desc">${r.desc}</div>
-    </div>`).join('');
+async function runPasteSignal(){
+  const text = document.getElementById('signalPasteIn').value.trim();
+  if(!text){toast('Paste a signal first','warn');return;}
+  const btn = document.getElementById('btnPasteSignal');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:5px;display:inline-block;"></div>Finding markets...';
+  document.getElementById('sigFeedLoad').style.display = 'flex';
+  document.getElementById('sigFeedLoadT').textContent = 'Searching for related markets...';
+  document.getElementById('signalFeed').innerHTML = '';
 
-  // Edge types
-  document.getElementById('edgeTypeList').innerHTML=EDGE_TYPES.map((e,i)=>`
-    <div style="padding:9px 0;border-bottom:${i<EDGE_TYPES.length-1?'1px solid var(--b1)':'none'};">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <div style="font-size:10px;font-weight:700;color:${e.col};font-family:var(--mono);">${e.type}</div>
-        <span style="font-size:7px;color:${e.col};border:1px solid ${e.col};padding:1px 6px;border-radius:2px;opacity:.7;">${e.speed}</span>
-      </div>
-      <div style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">${e.desc}</div>
-    </div>`).join('');
+  try{
+    const prompt = `You have live web search. Use it now before responding.
 
-  // Stake tiers
-  document.getElementById('stakeTierList').innerHTML=
-    `<div style="display:grid;grid-template-columns:100px 50px 70px 60px 45px;font-size:8px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;padding:6px 0;border-bottom:1px solid var(--b1);">
-      <span>Verdict</span><span>Edge</span><span>Confidence</span><span>Res Risk</span><span>Stake</span>
-    </div>`+
-    STAKE_TIERS.map(s=>`
-    <div style="display:grid;grid-template-columns:100px 50px 70px 60px 45px;padding:8px 0;border-bottom:1px solid var(--b1);align-items:center;">
-      <span style="font-size:10px;font-weight:700;color:${s.col};font-family:var(--mono);">${s.verdict}</span>
-      <span style="font-size:10px;color:var(--t2);">${s.edge}</span>
-      <span style="font-size:10px;color:var(--t2);">${s.conf}</span>
-      <span style="font-size:10px;color:var(--t2);">${s.res}</span>
-      <span style="font-size:12px;font-weight:700;color:${s.stake==='£0'?'var(--rd)':'var(--lm)'};">${s.stake}</span>
-    </div>`).join('');
+SIGNAL TO ANALYSE:
+${text}
 
-  // Rules
-  document.getElementById('rulesList').innerHTML=RULES.map((r,i)=>`
-    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:${i<RULES.length-1?'1px solid var(--b1)':'none'};">
-      <span style="font-size:8px;color:var(--cy);min-width:24px;padding-top:1px;font-family:var(--mono);">R${String(i+1).padStart(2,'0')}</span>
-      <span style="font-size:11px;color:var(--t2);line-height:1.6;font-family:var(--sans);">${r}</span>
-    </div>`).join('');
+Search tasks:
+1. Search polymarket.com for ALL markets related to this signal
+2. Search for latest news on this topic (last 48h) to understand current state
+3. Check which markets have odds that haven't yet reflected this signal
 
-  // Scanner stack
-  document.getElementById('scannerList').innerHTML=SCANNER_STACK.map((s,i)=>{
-    const sc={'Minutes':'var(--rd)','Hours':'var(--gd)','Daily':'var(--cy)'}[s.speed]||'var(--t3)';
-    return `<div style="display:grid;grid-template-columns:70px 120px 1fr;gap:10px;padding:10px 0;border-bottom:${i<SCANNER_STACK.length-1?'1px solid var(--b1)':'none'};align-items:flex-start;">
-      <span style="font-size:7px;color:${sc};border:1px solid ${sc};padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);">${s.speed}</span>
-      <span style="font-size:10px;font-weight:700;color:var(--t1);font-family:var(--mono);">${s.name}</span>
-      <span style="font-size:10px;color:var(--t3);line-height:1.6;font-family:var(--sans);">${s.how}</span>
-    </div>`;
-  }).join('');
+For each related market, return ONLY this exact JSON inside <signals> tags:
+<signals>
+[
+  {
+    "q": "Exact Polymarket market question",
+    "odds": "YES: X%",
+    "type": "geo|tech|second",
+    "conviction": 8,
+    "rr": 2,
+    "edge": "slow_update|second_order|info_lag",
+    "speed": "Hours|Days",
+    "thesis": "One sentence: what this signal means for this market and why you're early"
+  }
+]
+</signals>
+
+Rules:
+- conviction 1-10, only include >= 5
+- rr 1-5, exclude >= 4
+- Focus on second-order markets — not just the obvious first-order bet
+- Order by conviction descending`;
+
+    const resp = await claude([{role:'user', content: prompt}], SYS, 3000, true, false);
+    parseAndRenderSignals(resp, 'SIGNAL SCAN');
+    // Hide input after scan
+    document.getElementById('signalInputArea').style.display = 'none';
+    document.getElementById('btnToggleInput').textContent = '+ PASTE';
+  } catch(e){
+    document.getElementById('signalFeed').innerHTML = '<div class="err">Failed: '+e.message+'</div>';
+  } finally {
+    document.getElementById('sigFeedLoad').style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '◎ FIND MARKETS';
+    document.getElementById('lastScanTime').textContent = 'Last scan: ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
 }
+
+function parseAndRenderSignals(resp, source){
+  // Extract JSON from <signals> tags
+  const match = resp.match(/<signals>([\s\S]*?)<\/signals>/);
+  if(!match){
+    // Fallback: show raw response
+    document.getElementById('signalFeed').innerHTML = '<div class="card"><div class="ct">'+source+' RESULTS</div><div style="font-size:11px;color:var(--t2);line-height:1.8;font-family:var(--sans);white-space:pre-wrap;">'+resp.replace(/</g,'&lt;')+'</div></div>';
+    return;
+  }
+
+  let signals;
+  try{ signals = JSON.parse(match[1].trim()); }
+  catch(e){
+    document.getElementById('signalFeed').innerHTML = '<div class="err">Could not parse signal data. Raw response shown above.</div><div class="card"><div style="font-size:10px;color:var(--t2);font-family:var(--mono);white-space:pre-wrap;">'+resp.replace(/</g,'&lt;')+'</div></div>';
+    return;
+  }
+
+  if(!signals.length){
+    document.getElementById('signalFeed').innerHTML = '<div class="empty"><div class="ei">◎</div>No early edges found right now. Try again in 30 minutes or paste a specific signal.</div>';
+    return;
+  }
+
+  // Sort by conviction desc
+  signals.sort((a,b) => b.conviction - a.conviction);
+
+  const typeCol = {geo:'var(--cy)', tech:'var(--gd)', second:'var(--lm)'};
+  const typeLbl = {geo:'GEO', tech:'TECH', second:'2ND ORDER'};
+  const edgeLbl = {slow_update:'Slow Update', second_order:'Second-Order', info_lag:'Info Lag'};
+  const convClass = c => c >= 8 ? 'conv-high' : c >= 6 ? 'conv-med' : 'conv-low';
+  const rrCol = r => r <= 2 ? 'var(--lm)' : r === 3 ? 'var(--am)' : 'var(--rd)';
+  const speedCol = s => s === 'Hours' ? 'var(--rd)' : 'var(--gd)';
+
+  document.getElementById('signalFeed').innerHTML =
+    '<div style="font-size:8px;color:var(--t4);margin-bottom:8px;font-family:var(--mono);">'+signals.length+' EARLY EDGES FOUND — '+source+' — tap to analyse</div>' +
+    signals.map((s,i) => {
+      const col = typeCol[s.type] || 'var(--cy)';
+      return '<div class="sig-card '+s.type+'" data-type="'+s.type+'" data-conv="'+s.conviction+'" onclick="openSignalAnalysis('+JSON.stringify(JSON.stringify(s))+')" style="border-left-color:'+col+';">'
+        + '<div class="sig-q">'+s.q+'</div>'
+        + (s.thesis ? '<div class="sig-thesis">'+s.thesis+'</div>' : '')
+        + '<div class="sig-meta">'
+        + '<span class="conv-badge '+convClass(s.conviction)+'">'+s.conviction+'/10</span>'
+        + '<span class="edge-tag" style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44;">'+( edgeLbl[s.edge]||s.edge)+'</span>'
+        + '<span class="rr-tag" style="color:'+rrCol(s.rr)+';border:1px solid '+rrCol(s.rr)+'44;background:'+rrCol(s.rr)+'11;">RR: '+s.rr+'</span>'
+        + '<span style="font-size:8px;color:'+speedCol(s.speed)+';font-family:var(--mono);">'+s.speed+'</span>'
+        + '<span style="font-size:8px;color:var(--t3);margin-left:auto;font-family:var(--mono);">'+s.odds+'</span>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+  // Apply active filter
+  filterSignals(_activeFilter);
+  toast(signals.length + ' early edges found');
+}
+
+function openSignalAnalysis(signalJson){
+  // Parse the signal and pre-fill the Analyse tab
+  let s;
+  try{ s = JSON.parse(signalJson); } catch{ return; }
+
+  // Pre-fill analyse tab
+  document.getElementById('mktQ').value = s.q || '';
+  // Extract YES odds number
+  const oddsMatch = (s.odds||'').match(/(\d+)/);
+  if(oddsMatch) document.getElementById('mktYes').value = oddsMatch[1];
+  document.getElementById('mktWhy').value = s.thesis || '';
+  document.getElementById('mktGemini').value = '';
+
+  // Navigate to analyse tab
+  nav('analyse');
+  toast('Market loaded — tap RUN FULL ANALYSIS');
+}
+
+// Keep renderReference as no-op since the elements no longer exist
+function renderReference(){}
 
 // ═══════════════════════════════════════════════════════
 // TELEGRAM
