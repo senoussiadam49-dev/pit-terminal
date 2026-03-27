@@ -416,6 +416,7 @@ If you haven't run Gemini yet:
   <div class="ph">
     <div><div class="pt">BET <span>LOG</span></div><div class="ps">Track bets · Record edge · Build track record</div></div>
     <div style="display:flex;gap:6px;">
+      <button class="btn btn-gh btn-sm" onclick="openKB()">◎ KNOWLEDGE</button>
       <button class="btn btn-gh btn-sm" onclick="openCoach()">⚡ COACH</button>
       <button class="btn btn-cy btn-sm" onclick="openAddBet()">+ LOG BET</button>
     </div>
@@ -500,6 +501,104 @@ If you haven't run Gemini yet:
   <!-- Last scan time -->
   <div id="lastScanTime" style="font-size:8px;color:var(--t4);text-align:center;margin-top:8px;font-family:var(--mono);"></div>
 </div>
+</div>
+
+<!-- KNOWLEDGE BASE MODAL -->
+<div class="modal-ov hidden" id="kbOv" onclick="if(event.target===this)closeKB()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:90vh;">
+    <div class="mh"></div>
+    <div class="mt">KNOWLEDGE BASE</div>
+    <div class="ms">Everything Claude reads before every analysis</div>
+
+    <!-- Tabs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+      <button class="btn btn-cy btn-sm" id="kbTabAdd" onclick="showKBTab('add')" style="font-size:8px;">+ ADD</button>
+      <button class="btn btn-gh btn-sm" id="kbTabView" onclick="showKBTab('view')" style="font-size:8px;">VIEW ALL</button>
+      <button class="btn btn-gh btn-sm" id="kbTabLessons" onclick="showKBTab('lessons')" style="font-size:8px;">LESSONS</button>
+    </div>
+
+    <!-- ADD tab -->
+    <div id="kbPanelAdd">
+      <div class="mg">
+        <div class="mkl">Title</div>
+        <input type="text" class="field" id="kb_title" placeholder="e.g. Polymarket Resolution Rules">
+      </div>
+      <div class="mg">
+        <div class="mkl">Category</div>
+        <select class="field fsel" id="kb_cat">
+          <option value="resolution_rules">Resolution Rules</option>
+          <option value="market_mechanics">Market Mechanics</option>
+          <option value="historical">Historical Examples</option>
+          <option value="feedback">Feedback & Critiques</option>
+          <option value="strategy">Strategy</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+      <div class="mg">
+        <div class="mkl">Content (paste article, rules, notes)</div>
+        <textarea class="field" id="kb_content" rows="8" style="min-height:160px;resize:vertical;font-size:11px;line-height:1.6;" placeholder="Paste anything here — Polymarket resolution criteria, articles, feedback, notes...&#10;&#10;Claude will read this before every analysis from now on."></textarea>
+      </div>
+      <button class="btn btn-cy btn-full" onclick="saveKBEntry()" style="margin-top:4px;">◎ SAVE TO KNOWLEDGE BASE</button>
+    </div>
+
+    <!-- VIEW tab -->
+    <div id="kbPanelView" style="display:none;">
+      <div class="loading" id="kbViewLoad" style="display:none;"><div class="spin"></div><span>Loading...</span></div>
+      <div id="kbEntries"><div class="empty"><div class="ei">◎</div>No entries yet</div></div>
+    </div>
+
+    <!-- LESSONS tab -->
+    <div id="kbPanelLessons" style="display:none;">
+      <div class="mg">
+        <div class="mkl">Add manual lesson</div>
+        <textarea class="field" id="lesson_text" rows="3" style="min-height:70px;resize:vertical;font-size:11px;line-height:1.6;" placeholder="e.g. Always check resolution criteria mechanics before probability. Markets resolve on public statements not geopolitical reality."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" class="mg">
+        <div>
+          <div class="mkl">Market type</div>
+          <select class="field fsel" id="lesson_mkttype">
+            <option value="">All types</option>
+            <option value="geo">Geopolitical</option>
+            <option value="tech">Tech/AI</option>
+            <option value="second">Second-order</option>
+          </select>
+        </div>
+        <div>
+          <div class="mkl">Source</div>
+          <input type="text" class="field" id="lesson_source" placeholder="e.g. Iran ceasefire analysis">
+        </div>
+      </div>
+      <button class="btn btn-cy btn-full" onclick="saveLesson()" style="margin-top:4px;">✓ SAVE LESSON</button>
+      <div style="margin-top:12px;border-top:1px solid var(--b1);padding-top:12px;">
+        <div class="ct">Saved Lessons</div>
+        <div class="loading" id="lessonsLoad" style="display:none;"><div class="spin"></div><span>Loading...</span></div>
+        <div id="lessonsList"><div class="empty"><div class="ei">▲</div>No lessons yet</div></div>
+      </div>
+    </div>
+
+    <button class="btn btn-gh btn-full" onclick="closeKB()" style="margin-top:12px;">CLOSE</button>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-ov hidden" id="feedbackOv" onclick="if(event.target===this)closeFeedback()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh"></div>
+    <div class="mt">CHALLENGE THIS REPORT</div>
+    <div class="ms">Tell Claude what it got wrong · Save lesson permanently</div>
+    <div id="feedbackThread" style="max-height:40vh;overflow-y:auto;margin-bottom:10px;"></div>
+    <div class="loading" id="feedbackLoad" style="display:none;"><div class="spin"></div><span id="feedbackLoadT">Thinking...</span></div>
+    <div style="background:var(--bg);border:1px solid var(--b2);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+      <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--cy);margin-bottom:6px;">Your challenge or feedback</div>
+      <textarea class="ci" id="feedbackInput" placeholder="e.g. You missed that Trump always de-escalates on Monday mornings — that increases ceasefire probability..." rows="2" style="display:block;width:100%;min-height:60px;resize:vertical;margin-bottom:8px;" oninput="ar(this)"></textarea>
+      <div style="display:flex;gap:7px;">
+        <button class="btn btn-cy" style="flex:1;" onclick="sendFeedback()">↑ SEND</button>
+        <button class="btn btn-gd btn-sm" onclick="saveFeedbackAsLesson()">◎ SAVE AS LESSON</button>
+      </div>
+    </div>
+    <div style="font-size:8px;color:var(--t3);text-align:center;margin-bottom:8px;">Challenge the report · Save the insight as a permanent lesson</div>
+    <button class="btn btn-gh btn-full" onclick="closeFeedback()">CLOSE</button>
+  </div>
 </div>
 
 </div><!-- end .app -->
@@ -923,7 +1022,28 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('bet_date').value=new Date().toISOString().split('T')[0];
   renderBets();
+  // Pre-seed lessons on first load if Supabase connected and no lessons exist yet
+  preseedLessons();
 });
+
+async function preseedLessons(){
+  if(!K.sbU||!K.sbK) return;
+  try{
+    const existing=await sbFetch('pit_lessons','limit=1');
+    if(existing&&existing.length>0) return; // already seeded
+    const seedLessons=[
+      {lesson:'Never base a trade solely on geopolitical logic. Polymarket resolves on public statements not reality. Always ask: will both sides SAY this happened in a way that meets the exact resolution criteria?',lesson_type:'manual',market_type:'geo',source:'Iran ceasefire analysis feedback'},
+      {lesson:'Trump escalate-then-de-escalate pattern increases probability of surprise headline announcements before Monday market open. This is a YES risk on ceasefire markets, not a NO signal.',lesson_type:'manual',market_type:'geo',source:'Iran ceasefire analysis feedback'},
+      {lesson:'Check the exact Polymarket resolution criteria BEFORE estimating probability. A market can resolve YES on a vague political statement even if no real agreement exists.',lesson_type:'manual',market_type:null,source:'Market mechanics critique'},
+      {lesson:'Your edge must be timing and coordination constraints, not just geopolitical logic. Even politically undesirable ceasefires can happen as optics trades.',lesson_type:'manual',market_type:'geo',source:'Market mechanics critique'}
+    ];
+    for(const l of seedLessons){
+      await sbInsert('pit_lessons',l);
+      await new Promise(r=>setTimeout(r,200));
+    }
+    console.log('Lessons pre-seeded');
+  }catch(e){}
+}
 
 // ═══════════════════════════════════════════════════════
 // NAV
@@ -970,11 +1090,17 @@ function updateStatus(){
 async function claude(messages, system=null, maxTokens=4000, useWebSearch=false, injectCalib=true){
   if(!K.ant){toast('Add Claude API key first','warn');openModal();throw new Error('No API key');}
 
-  // Build system prompt with calibration profile injected
+  // Build system prompt — inject knowledge base + lessons + calibration
   let fullSystem=system||SYS;
   if(injectCalib&&fullSystem===SYS){
-    const calibProfile=await buildCalibProfile();
-    if(calibProfile) fullSystem=calibProfile+'\n'+SYS;
+    const [calibProfile, knowledgeContext] = await Promise.all([
+      buildCalibProfile(),
+      buildKnowledgeContext()
+    ]);
+    let injected='';
+    if(knowledgeContext) injected+=knowledgeContext+'\n\n';
+    if(calibProfile) injected+=calibProfile+'\n\n';
+    if(injected) fullSystem=injected+SYS;
   }
 
   const body={
@@ -1189,6 +1315,7 @@ function renderScanVerdict(text,title){
       <button class="btn btn-placed btn-sm" onclick="openBetModal(${JSON.stringify(text)},'real')">✓ BET PLACED</button>
       <button class="btn btn-paper btn-sm" onclick="openBetModal(${JSON.stringify(text)},'paper')">◎ PAPER TRADE</button>
       <button class="btn btn-pass btn-sm" onclick="clearScan()">✕ PASS</button>
+      <button class="btn btn-gh btn-sm" onclick="openFeedback(${JSON.stringify(text)})">✎ FEEDBACK</button>
       <button class="btn btn-gh btn-sm" style="margin-left:auto;" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied')">Copy</button>
     </div>
   </div>`;
@@ -1316,6 +1443,7 @@ function renderAnalysisOut(q,text){
       <button class="btn btn-placed btn-sm" onclick="openBetModal(${JSON.stringify(text)},'real')">✓ BET PLACED</button>
       <button class="btn btn-paper btn-sm" onclick="openBetModal(${JSON.stringify(text)},'paper')">◎ PAPER TRADE</button>
       <button class="btn btn-pass btn-sm" onclick="document.getElementById('analyseOut').innerHTML=''">✕ PASS</button>
+      <button class="btn btn-gh btn-sm" onclick="openFeedback(${JSON.stringify(text)})">✎ FEEDBACK</button>
       <button class="btn btn-gh btn-sm" style="margin-left:auto;" onclick="navigator.clipboard.writeText(${JSON.stringify(text)});toast('Copied')">Copy</button>
     </div>
   </div>`;
@@ -1625,10 +1753,13 @@ async function saveResolution(){
 
   closeResolveModal();renderBets();
   const won=(b.dir==='YES'&&_resolveOutcome==='YES')||(b.dir==='NO'&&_resolveOutcome==='NO');
-  toast(b.isReal?(won?`✓ Won £${pnl} — outcome saved to AI memory`:`✗ Lost £${Math.abs(pnl)} — outcome saved to AI memory`):'Paper trade resolved — saved');
+  toast(b.isReal?(won?'Won £'+pnl+' — outcome saved to AI memory':'Lost £'+Math.abs(pnl)+' — outcome saved to AI memory'):'Paper trade resolved — saved');
+
+  // Auto-extract lesson from this outcome
+  autoExtractLesson(b, _resolveOutcome, thesisHeld);
 
   if(b.isReal){
-    await sendTg((won?'WIN':'LOSS')+' PIT\n\n'+b.q.substring(0,70)+'\n'+b.dir+' '+( won?'+':'')+pnl+' Thesis: '+thesisHeld);
+    await sendTg((won?'WIN':'LOSS')+' PIT\n\n'+b.q.substring(0,70)+'\n'+b.dir+' '+(won?'+':'')+pnl+' Thesis: '+thesisHeld);
   }
 }
 
@@ -2160,6 +2291,250 @@ function openSignalAnalysis(signalJson){
 
 // Keep renderReference as no-op since the elements no longer exist
 function renderReference(){}
+
+// ═══════════════════════════════════════════════════════
+// KNOWLEDGE BASE + LESSONS SYSTEM
+// ═══════════════════════════════════════════════════════
+
+// Build knowledge context — injected into every Claude call
+async function buildKnowledgeContext(){
+  if(!K.sbU||!K.sbK) return '';
+  try{
+    const [knowledge, lessons] = await Promise.all([
+      sbFetch('pit_knowledge','order=created_at.desc&limit=15'),
+      sbFetch('pit_lessons','order=created_at.desc&limit=20')
+    ]);
+    const lines=[];
+    if(knowledge&&knowledge.length){
+      lines.push('═══ KNOWLEDGE BASE (read before every analysis) ═══');
+      knowledge.forEach(k=>{
+        lines.push('['+k.category.toUpperCase()+'] '+k.title+':');
+        lines.push(k.content.substring(0,800));
+        lines.push('');
+      });
+    }
+    if(lessons&&lessons.length){
+      lines.push('═══ LEARNED LESSONS (apply to every analysis) ═══');
+      lessons.forEach(l=>{
+        const tag=l.market_type?'['+l.market_type.toUpperCase()+'] ':'';
+        lines.push(tag+l.lesson);
+      });
+      lines.push('');
+    }
+    if(!lines.length) return '';
+    lines.push('═══════════════════════════════════════════════════');
+    return lines.join('\n');
+  }catch(e){return '';}
+}
+
+// Save knowledge entry to Supabase
+async function saveKBEntry(){
+  const title=document.getElementById('kb_title').value.trim();
+  const content=document.getElementById('kb_content').value.trim();
+  const category=document.getElementById('kb_cat').value;
+  if(!title||!content){toast('Title and content required','warn');return;}
+  if(!K.sbU||!K.sbK){toast('Add Supabase keys first','warn');return;}
+  const btn=document.querySelector('#kbPanelAdd .btn-cy');
+  btn.disabled=true;btn.textContent='Saving...';
+  const result=await sbInsert('pit_knowledge',{title,content,category});
+  btn.disabled=false;btn.textContent='◎ SAVE TO KNOWLEDGE BASE';
+  if(result){
+    toast('Saved to knowledge base — Claude will read this from now on');
+    document.getElementById('kb_title').value='';
+    document.getElementById('kb_content').value='';
+  }else{
+    toast('Save failed — check Supabase connection','err');
+  }
+}
+
+// Save manual lesson
+async function saveLesson(){
+  const lesson=document.getElementById('lesson_text').value.trim();
+  const market_type=document.getElementById('lesson_mkttype').value;
+  const source=document.getElementById('lesson_source').value.trim();
+  if(!lesson){toast('Write a lesson first','warn');return;}
+  if(!K.sbU||!K.sbK){toast('Add Supabase keys first','warn');return;}
+  const result=await sbInsert('pit_lessons',{lesson,lesson_type:'manual',market_type:market_type||null,source:source||null});
+  if(result){
+    toast('Lesson saved — Claude will apply this from now on');
+    document.getElementById('lesson_text').value='';
+    loadLessons();
+  }else{
+    toast('Save failed','err');
+  }
+}
+
+// Auto-extract lesson from resolved trade
+async function autoExtractLesson(bet, outcome, thesisHeld){
+  if(!K.sbU||!K.sbK) return;
+  if(!bet.isReal&&bet.status!=='CLOSED') return;
+  try{
+    const won=(bet.dir==='YES'&&outcome==='YES')||(bet.dir==='NO'&&outcome==='NO');
+    const edgePp=bet.dir==='YES'?bet.myOdds-bet.mktOdds:(100-bet.myOdds)-(100-bet.mktOdds);
+    // Only extract lesson if there's something meaningful to learn
+    const isOverconfident=edgePp>10&&!won;
+    const isUnderconfident=edgePp<3&&won;
+    const thesisBroke=thesisHeld==='no'||thesisHeld==='technicality';
+    if(!isOverconfident&&!isUnderconfident&&!thesisBroke) return;
+    // Ask Claude to generate a lesson
+    const prompt='Generate one short, specific lesson (1-2 sentences) from this resolved prediction market bet. Be direct and actionable.\n\nMarket: "'+bet.q+'"\nMy direction: '+bet.dir+'\nMy stated P: '+bet.myOdds+'%\nMarket odds: '+bet.mktOdds+'%\nEdge claimed: '+edgePp.toFixed(1)+'pp\nOutcome: '+outcome+'\nThesis held: '+thesisHeld+'\n\nIssue detected: '+(isOverconfident?'Overconfident (claimed '+edgePp.toFixed(1)+'pp edge, was wrong)':isUnderconfident?'Underconfident (edge was real)':'Thesis broke')+'\n\nReturn ONLY the lesson text, nothing else.';
+    const lesson=await claude([{role:'user',content:prompt}],null,200,false,false);
+    if(lesson&&lesson.trim()){
+      await sbInsert('pit_lessons',{
+        lesson:lesson.trim(),
+        lesson_type:'auto',
+        market_type:bet.mktType||null,
+        source:'Auto-extracted from: '+bet.q.substring(0,50)
+      });
+    }
+  }catch(e){}
+}
+
+// Knowledge Base modal
+function openKB(){
+  document.getElementById('kbOv').classList.remove('hidden');
+  showKBTab('add');
+}
+function closeKB(){document.getElementById('kbOv').classList.add('hidden');}
+
+function showKBTab(tab){
+  ['add','view','lessons'].forEach(t=>{
+    document.getElementById('kbPanel'+t.charAt(0).toUpperCase()+t.slice(1)).style.display=t===tab?'block':'none';
+    const btn=document.getElementById('kbTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(btn) btn.className=t===tab?'btn btn-cy btn-sm':'btn btn-gh btn-sm';
+    if(btn) btn.style.fontSize='8px';
+  });
+  if(tab==='view') loadKBEntries();
+  if(tab==='lessons') loadLessons();
+}
+
+async function loadKBEntries(){
+  if(!K.sbU||!K.sbK){document.getElementById('kbEntries').innerHTML='<div style="font-size:9px;color:var(--t4);">Add Supabase keys first</div>';return;}
+  document.getElementById('kbViewLoad').style.display='flex';
+  const data=await sbFetch('pit_knowledge','order=created_at.desc&limit=50');
+  document.getElementById('kbViewLoad').style.display='none';
+  if(!data||!data.length){document.getElementById('kbEntries').innerHTML='<div class="empty"><div class="ei">◎</div>No entries yet — tap + ADD to start</div>';return;}
+  const catCol={resolution_rules:'var(--cy)',market_mechanics:'var(--gd)',historical:'var(--lm)',feedback:'var(--am)',strategy:'var(--purple)',general:'var(--t3)'};
+  document.getElementById('kbEntries').innerHTML=data.map(k=>`
+    <div style="padding:10px 0;border-bottom:1px solid var(--b1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:10px;font-weight:700;color:#fff;font-family:var(--mono);">${k.title}</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:7px;color:${catCol[k.category]||'var(--t3)'};border:1px solid;padding:1px 5px;border-radius:2px;">${k.category.replace('_',' ').toUpperCase()}</span>
+          <button onclick="deleteKBEntry(${k.id})" style="background:none;border:none;color:var(--rd);cursor:pointer;font-size:11px;">✕</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--t3);line-height:1.5;font-family:var(--sans);">${k.content.substring(0,150)}${k.content.length>150?'…':''}</div>
+    </div>`).join('');
+}
+
+async function deleteKBEntry(id){
+  if(!confirm('Delete this knowledge entry?')) return;
+  await sbUpdate('pit_knowledge','id=eq.'+id,{});
+  // Actually delete
+  try{
+    await fetch(K.sbU+'/rest/v1/pit_knowledge?id=eq.'+id,{
+      method:'DELETE',
+      headers:{'apikey':K.sbK,'Authorization':'Bearer '+K.sbK}
+    });
+    toast('Deleted');
+    loadKBEntries();
+  }catch(e){toast('Delete failed','err');}
+}
+
+async function loadLessons(){
+  if(!K.sbU||!K.sbK){document.getElementById('lessonsList').innerHTML='<div style="font-size:9px;color:var(--t4);">Add Supabase keys first</div>';return;}
+  document.getElementById('lessonsLoad').style.display='flex';
+  const data=await sbFetch('pit_lessons','order=created_at.desc&limit=30');
+  document.getElementById('lessonsLoad').style.display='none';
+  if(!data||!data.length){document.getElementById('lessonsList').innerHTML='<div class="empty"><div class="ei">▲</div>No lessons yet</div>';return;}
+  const typeCol={manual:'var(--cy)',auto:'var(--lm)',feedback:'var(--gd)'};
+  document.getElementById('lessonsList').innerHTML=data.map(l=>`
+    <div style="padding:8px 0;border-bottom:1px solid var(--b1);display:flex;gap:8px;align-items:flex-start;">
+      <span style="font-size:7px;color:${typeCol[l.lesson_type]||'var(--t3)'};border:1px solid;padding:1px 5px;border-radius:2px;white-space:nowrap;margin-top:2px;">${(l.lesson_type||'manual').toUpperCase()}</span>
+      <div>
+        <div style="font-size:11px;color:var(--t1);line-height:1.6;font-family:var(--sans);">${l.lesson}</div>
+        ${l.source?'<div style="font-size:8px;color:var(--t4);margin-top:2px;">'+l.source+'</div>':''}
+      </div>
+    </div>`).join('');
+}
+
+// ─── FEEDBACK SYSTEM ───
+let _feedbackVerdictText='';
+let _feedbackHistory=[];
+
+function openFeedback(verdictText){
+  _feedbackVerdictText=verdictText;
+  _feedbackHistory=[];
+  document.getElementById('feedbackThread').innerHTML='';
+  document.getElementById('feedbackInput').value='';
+  document.getElementById('feedbackOv').classList.remove('hidden');
+  // Start with a prompt from Claude acknowledging the report
+  addFeedbackMsg('system','Report loaded. What did I get wrong? Challenge any part of my analysis — I will defend it or update my reasoning. Your best insights can be saved as permanent lessons.');
+}
+function closeFeedback(){document.getElementById('feedbackOv').classList.add('hidden');_feedbackVerdictText='';_feedbackHistory=[];}
+
+async function sendFeedback(){
+  const input=document.getElementById('feedbackInput');
+  const msg=input.value.trim();
+  if(!msg){toast('Write your challenge first','warn');return;}
+  input.value='';
+  addFeedbackMsg('user',msg);
+  _feedbackHistory.push({role:'user',content:msg});
+  document.getElementById('feedbackLoad').style.display='flex';
+  document.getElementById('feedbackLoadT').textContent='Responding...';
+  try{
+    const systemMsg='You are being challenged on a prediction market analysis you just gave. Defend your reasoning honestly or acknowledge where you were wrong. Be specific. The original report: "'+_feedbackVerdictText.substring(0,600)+'" Keep responses under 150 words. If the challenger identifies a genuine flaw, admit it clearly and explain what you should have done differently.';
+    const resp=await claude(_feedbackHistory,systemMsg,600,false,false);
+    _feedbackHistory.push({role:'assistant',content:resp});
+    document.getElementById('feedbackLoad').style.display='none';
+    addFeedbackMsg('claude',resp);
+  }catch(e){
+    document.getElementById('feedbackLoad').style.display='none';
+    addFeedbackMsg('system','Error: '+e.message);
+  }
+}
+
+async function saveFeedbackAsLesson(){
+  if(!_feedbackHistory.length){toast('Have a conversation first','warn');return;}
+  document.getElementById('feedbackLoad').style.display='flex';
+  document.getElementById('feedbackLoadT').textContent='Extracting lesson...';
+  try{
+    const convo=_feedbackHistory.map(m=>(m.role==='user'?'CHALLENGE: ':'RESPONSE: ')+m.content).join('\n\n');
+    const prompt='From this feedback conversation about a prediction market analysis, extract ONE specific, actionable lesson in 1-2 sentences. Focus on what should be done differently next time. Return ONLY the lesson text.\n\n'+convo;
+    const lesson=await claude([{role:'user',content:prompt}],null,200,false,false);
+    document.getElementById('feedbackLoad').style.display='none';
+    if(lesson&&lesson.trim()&&K.sbU&&K.sbK){
+      await sbInsert('pit_lessons',{
+        lesson:lesson.trim(),
+        lesson_type:'feedback',
+        source:'Feedback session'
+      });
+      addFeedbackMsg('system','✓ Lesson saved: "'+lesson.trim().substring(0,100)+'" — Claude will apply this in every future analysis.');
+      toast('Lesson saved permanently');
+    }else if(lesson){
+      addFeedbackMsg('system','Lesson extracted: "'+lesson.trim()+'" — Add Supabase keys to save permanently.');
+    }
+  }catch(e){
+    document.getElementById('feedbackLoad').style.display='none';
+    toast('Extraction failed','err');
+  }
+}
+
+function addFeedbackMsg(role,text){
+  const el=document.getElementById('feedbackThread');
+  const isUser=role==='user';
+  const isSystem=role==='system';
+  const div=document.createElement('div');
+  div.style.marginBottom='8px';
+  if(isSystem){
+    div.innerHTML='<div style="font-size:9px;color:var(--cy);background:var(--cydim);border:1px solid var(--cybdr);border-radius:5px;padding:7px 10px;line-height:1.6;font-family:var(--sans);">'+text+'</div>';
+  }else{
+    div.innerHTML='<div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:'+(isUser?'var(--t2)':'var(--cy)')+';margin-bottom:3px;">'+(isUser?'You':'PIT Analyst')+'</div><div style="background:'+(isUser?'var(--bg3)':'var(--bg2)')+';border:1px solid '+(isUser?'var(--b3)':'var(--b2)')+';border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t1);font-family:var(--sans);line-height:1.7;">'+(isUser?text.replace(/</g,'&lt;'):fmt(text))+'</div>';
+  }
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+}
 
 // ═══════════════════════════════════════════════════════
 // TELEGRAM
