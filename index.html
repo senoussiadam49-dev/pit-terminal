@@ -106,6 +106,14 @@ body{background:var(--bg);color:var(--t1);font-family:var(--mono);min-height:100
 .edge-moderate{background:var(--gddim);color:var(--gd);border:1px solid var(--gdbdr);}
 .edge-none{background:var(--bg3);color:var(--t3);border:1px solid var(--b3);}
 
+/* DRAG DROP ZONE */
+.drop-zone{border:2px dashed var(--b2);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px;background:var(--bg);}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--cy);background:var(--cydim);}
+.drop-zone-icon{font-size:24px;margin-bottom:6px;}
+.drop-zone-text{font-size:10px;color:var(--t3);font-family:var(--mono);letter-spacing:1px;}
+.drop-zone-sub{font-size:8px;color:var(--t4);margin-top:4px;font-family:var(--mono);}
+.file-processing{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--cydim);border:1px solid var(--cybdr);border-radius:6px;margin-bottom:10px;font-size:10px;color:var(--cy);font-family:var(--mono);}
+
 /* SIGNAL FEED */
 .sig-card{background:var(--bg2);border:1px solid var(--b2);border-radius:8px;padding:13px 14px;margin-bottom:9px;cursor:pointer;transition:border-color .15s;border-left:3px solid var(--b3);}
 .sig-card:active{background:var(--bg3);}
@@ -519,6 +527,29 @@ If you haven't run Gemini yet:
 
     <!-- ADD tab -->
     <div id="kbPanelAdd">
+
+      <!-- Drag & Drop Zone -->
+      <div class="drop-zone" id="kbDropZone"
+        ondragover="kbDragOver(event)"
+        ondragleave="kbDragLeave(event)"
+        ondrop="kbDrop(event)"
+        onclick="document.getElementById('kbFileInput').click()">
+        <div class="drop-zone-icon">◎</div>
+        <div class="drop-zone-text">DRAG & DROP FILE HERE</div>
+        <div class="drop-zone-sub">or tap to browse · .txt .pdf .md .html supported</div>
+      </div>
+      <input type="file" id="kbFileInput" accept=".txt,.pdf,.md,.html,.htm" style="display:none;" onchange="kbFileSelected(event)">
+      <div id="kbFileProcessing" style="display:none;" class="file-processing">
+        <div class="spin" style="width:10px;height:10px;border-width:1.5px;flex-shrink:0;"></div>
+        <span id="kbFileProcessingText">Reading file...</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;height:1px;background:var(--b1);"></div>
+        <div style="font-size:8px;color:var(--t4);font-family:var(--mono);">OR PASTE MANUALLY</div>
+        <div style="flex:1;height:1px;background:var(--b1);"></div>
+      </div>
+
       <div class="mg">
         <div class="mkl">Title</div>
         <input type="text" class="field" id="kb_title" placeholder="e.g. Polymarket Resolution Rules">
@@ -536,7 +567,7 @@ If you haven't run Gemini yet:
       </div>
       <div class="mg">
         <div class="mkl">Content (paste article, rules, notes)</div>
-        <textarea class="field" id="kb_content" rows="8" style="min-height:160px;resize:vertical;font-size:11px;line-height:1.6;" placeholder="Paste anything here — Polymarket resolution criteria, articles, feedback, notes...&#10;&#10;Claude will read this before every analysis from now on."></textarea>
+        <textarea class="field" id="kb_content" rows="6" style="min-height:120px;resize:vertical;font-size:11px;line-height:1.6;" placeholder="Paste anything here — Polymarket resolution criteria, articles, feedback, notes...&#10;&#10;Claude will read this before every analysis from now on."></textarea>
       </div>
       <button class="btn btn-cy btn-full" onclick="saveKBEntry()" style="margin-top:4px;">◎ SAVE TO KNOWLEDGE BASE</button>
     </div>
@@ -2325,6 +2356,104 @@ async function buildKnowledgeContext(){
     lines.push('═══════════════════════════════════════════════════');
     return lines.join('\n');
   }catch(e){return '';}
+}
+
+// ─── DRAG & DROP FILE HANDLING ───
+function kbDragOver(e){
+  e.preventDefault();
+  document.getElementById('kbDropZone').classList.add('drag-over');
+}
+
+function kbDragLeave(e){
+  document.getElementById('kbDropZone').classList.remove('drag-over');
+}
+
+function kbDrop(e){
+  e.preventDefault();
+  document.getElementById('kbDropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if(file) processKBFile(file);
+}
+
+function kbFileSelected(e){
+  const file = e.target.files[0];
+  if(file) processKBFile(file);
+  e.target.value = ''; // reset so same file can be selected again
+}
+
+async function processKBFile(file){
+  const show = (msg) => {
+    document.getElementById('kbFileProcessing').style.display='flex';
+    document.getElementById('kbFileProcessingText').textContent=msg;
+  };
+  const hide = () => document.getElementById('kbFileProcessing').style.display='none';
+
+  const name = file.name;
+  const ext = name.split('.').pop().toLowerCase();
+  const title = name.replace(/\.[^.]+$/, '').replace(/[-_]/g,' ');
+
+  // Auto-set title from filename
+  document.getElementById('kb_title').value = title.charAt(0).toUpperCase()+title.slice(1);
+
+  if(ext === 'pdf'){
+    show('Reading PDF...');
+    try{
+      const arrayBuffer = await file.arrayBuffer();
+      const text = await extractPDFText(arrayBuffer);
+      document.getElementById('kb_content').value = text;
+      hide();
+      toast('PDF loaded — '+Math.round(text.length/1000)+'k chars extracted');
+    }catch(e){
+      hide();
+      toast('PDF read failed — try copy-pasting the text instead','err');
+    }
+  } else if(['txt','md','html','htm'].includes(ext)){
+    show('Reading file...');
+    try{
+      const text = await file.text();
+      const cleaned = ext==='html'||ext==='htm' ? stripHTML(text) : text;
+      document.getElementById('kb_content').value = cleaned;
+      hide();
+      toast('File loaded — '+Math.round(cleaned.length/1000)+'k chars');
+    }catch(e){
+      hide();
+      toast('Could not read file','err');
+    }
+  } else {
+    toast('File type not supported. Use .txt .pdf .md .html','warn');
+  }
+}
+
+function stripHTML(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  // Remove scripts and styles
+  tmp.querySelectorAll('script,style,nav,header,footer').forEach(el=>el.remove());
+  return tmp.textContent.replace(/\s+/g,' ').trim();
+}
+
+async function extractPDFText(arrayBuffer){
+  // Use PDF.js from CDN if available, otherwise fallback
+  if(typeof pdfjsLib === 'undefined'){
+    // Load PDF.js dynamically
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  const pages = [];
+  for(let i=1; i<=Math.min(pdf.numPages, 50); i++){
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map(item=>item.str).join(' ');
+    pages.push(pageText);
+  }
+  return pages.join('\n\n').substring(0, 15000); // cap at 15k chars
 }
 
 // Save knowledge entry to Supabase
