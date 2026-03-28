@@ -2910,8 +2910,9 @@ function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,
 Object.defineProperties(K,{
   pmPk:{get(){return localStorage.getItem('pit_pmPk')||'';}},
   pmFunder:{get(){return localStorage.getItem('pit_pmFunder')||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';}}
-});
-function getAutoBetLog(){return JSON.parse(localStorage.getItem('pit_autobet_log')||'[]');}
+});let _autoBetOn=false;
+
+  function getAutoBetLog(){return JSON.parse(localStorage.getItem('pit_autobet_log')||'[]');}
 function saveAutoBetLog(l){localStorage.setItem('pit_autobet_log',JSON.stringify(l));}
 function getDailySpent(){const today=new Date().toISOString().split('T')[0];return getAutoBetLog().filter(b=>b.date===today&&b.status==='placed').reduce((s,b)=>s+(b.amount||0),0);}
 async function toggleAutoBet(){
