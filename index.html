@@ -1177,7 +1177,7 @@ function saveK(){
   localStorage.setItem('pit_sbK',document.getElementById('kSbK').value.trim());
   localStorage.setItem('pit_tgt',document.getElementById('kTgT').value.trim());
   localStorage.setItem('pit_tgc',document.getElementById('kTgC').value.trim());
-  updateStatus();cm();toast('Keys saved');
+  const pk=document.getElementById('kPmPk');const fu=document.getElementById('kPmFunder');if(pk)localStorage.setItem('pit_pmPk',pk.value.trim());if(fu)localStorage.setItem('pit_pmFunder',fu.value.trim());updateStatus();cm();toast('Keys saved');
 }
 function updateStatus(){
   const s=(d,l,ok,lb)=>{const dot=document.getElementById(d);if(!dot)return;dot.className='dot'+(ok?' live':'');if(!ok)dot.style.background='var(--t4)';document.getElementById(l).textContent=ok?lb+' ✓':lb;};
@@ -2909,11 +2909,6 @@ Object.defineProperties(K,{
   pmPk:{get(){return localStorage.getItem('pit_pmPk')||'';}},
   pmFunder:{get(){return localStorage.getItem('pit_pmFunder')||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';}}
 });
-const _origSaveK=saveK;
-function saveK(){_origSaveK();const pk=document.getElementById('kPmPk');const fu=document.getElementById('kPmFunder');if(pk)localStorage.setItem('pit_pmPk',pk.value.trim());if(fu)localStorage.setItem('pit_pmFunder',fu.value.trim());}
-const _origOpenModal=openModal;
-function openModal(){_origOpenModal();const pk=document.getElementById('kPmPk');const fu=document.getElementById('kPmFunder');if(pk)pk.value=K.pmPk;if(fu)fu.value=K.pmFunder||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';}
-let _autoBetOn=false;
 function getAutoBetLog(){return JSON.parse(localStorage.getItem('pit_autobet_log')||'[]');}
 function saveAutoBetLog(l){localStorage.setItem('pit_autobet_log',JSON.stringify(l));}
 function getDailySpent(){const today=new Date().toISOString().split('T')[0];return getAutoBetLog().filter(b=>b.date===today&&b.status==='placed').reduce((s,b)=>s+(b.amount||0),0);}
