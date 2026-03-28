@@ -485,6 +485,7 @@ If you haven't run Gemini yet:
     <div style="display:flex;gap:7px;margin-bottom:10px;">
       <button class="btn btn-cy" style="flex:1;" id="btnAutoScan" onclick="runAutoScan()">◎ AUTO-SCAN NOW</button>
       <button class="btn btn-gh btn-sm" onclick="toggleSignalInput()" id="btnToggleInput">+ PASTE</button>
+      <button class="btn btn-gh btn-sm" onclick="loadSISInbox()" id="btnSISInbox">📡 SIS</button>
     </div>
     <div id="signalInputArea" style="display:none;">
       <textarea class="pb" id="signalPasteIn" placeholder="Paste a headline, article, or observation...&#10;&#10;Claude will find every related Polymarket market, score them, and rank by edge." style="min-height:90px;margin-bottom:8px;"></textarea>
@@ -2741,7 +2742,66 @@ function fmt(t){
     .split('\n').map(l=>l.startsWith('<')||!l.trim()?l:`<p>${l}</p>`).join('\n');
 }
 
-function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+async function loadSISInbox(){
+  const btn = document.getElementById('btnSISInbox');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin" style="width:10px;height:10px;border-width:1.5px;margin-right:5px;display:inline-block;"></div>';
+  document.getElementById('sigFeedLoad').style.display = 'flex';
+  document.getElementById('sigFeedLoadT').textContent = 'Reading SIS signals...';
+  document.getElementById('signalFeed').innerHTML = '';
+  if(!K.sbU||!K.sbK){
+    document.getElementById('signalFeed').innerHTML = '<div class="err">Add Supabase keys first</div>';
+    document.getElementById('sigFeedLoad').style.display = 'none';
+    btn.disabled = false; btn.innerHTML = '📡 SIS';
+    return;
+  }
+  try{
+    const data = await sbFetch('sis_signals','order=created_at.desc&limit=20&processed=eq.false');
+    if(!data||!data.length){
+      document.getElementById('signalFeed').innerHTML = '<div class="empty"><div class="ei">📡</div>No new SIS signals yet<br><span style="font-size:7px;color:var(--t4);margin-top:4px;display:block;">SIS scans every 30 min</span></div>';
+    } else {
+      const typeCol={'AI & Infrastructure':'var(--cy)','Oil, Gas & Energy Geopolitics':'var(--gd)','Cyber & Defence Tech':'var(--lm)','Space & Satellite Economy':'var(--lm)','Geopolitical Momentum & Critical Minerals':'var(--am)'};
+      document.getElementById('signalFeed').innerHTML =
+        '<div style="font-size:8px;color:var(--t4);margin-bottom:8px;font-family:var(--mono);">'+data.length+' SIS SIGNALS — tap to find Polymarket markets</div>'+
+        data.map(sig=>{
+          const col=typeCol[sig.theme]||'var(--cy)';
+          const sc=sig.signal_strength==='HIGH'?'var(--rd)':'var(--gd)';
+          const tk=(sig.tickers||[]).map(t=>'$'+t).join(' · ')||'—';
+          const tm=sig.created_at?new Date(sig.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
+          const sH=JSON.stringify(sig.headline||'');
+          const sT=JSON.stringify(sig.second_order||'');
+          return '<div class="sig-card" style="border-left-color:'+col+';">'
+            +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:7px;color:'+sc+';font-family:var(--mono);font-weight:700;">'+sig.signal_strength+' · SIS</span><span style="font-size:7px;color:var(--t4);font-family:var(--mono);">'+tm+'</span></div>'
+            +'<div class="sig-q">'+(sig.headline||'').replace(/</g,'&lt;')+'</div>'
+            +(sig.second_order?'<div class="sig-thesis">'+sig.second_order+'</div>':'')
+            +'<div style="font-size:8px;color:var(--t3);margin-bottom:8px;font-family:var(--mono);">'+sig.theme+' · '+tk+'</div>'
+            +'<div style="display:flex;gap:6px;"><button class="btn btn-cy btn-sm" style="flex:1;" onclick="analyseSISSignal('+sig.id+','+sH+','+sT+')">⚡ FIND MARKETS</button>'
+            +'<button class="btn btn-gh btn-sm" onclick="markSISProcessed('+sig.id+',this)">✓</button></div>'
+            +'</div>';
+        }).join('');
+    }
+  }catch(e){document.getElementById('signalFeed').innerHTML='<div class="err">'+e.message+'</div>';}
+  document.getElementById('sigFeedLoad').style.display='none';
+  btn.disabled=false; btn.innerHTML='📡 SIS';
+  document.getElementById('lastScanTime').textContent='SIS inbox: '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+async function analyseSISSignal(id, headline, thesis){
+  await markSISProcessed(id, null);
+  document.getElementById('scanIn').value = headline+(thesis?'\n\nSecond-order: '+thesis:'');
+  nav('scan');
+  runScan();
+}
+
+async function markSISProcessed(id, btn){
+  if(!K.sbU||!K.sbK) return;
+  try{
+    await sbUpdate('sis_signals','id=eq.'+id,{processed:true});
+    if(btn){btn.textContent='✓';btn.disabled=true;btn.style.color='var(--lm)';}
+    toast('Marked processed');
+  }catch(e){}
+}
+  function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
 
 let tT;
 function toast(msg,type=''){
