@@ -481,6 +481,15 @@ If you haven't run Gemini yet:
     <div id="openBets"><div class="empty"><div class="ei">◎</div>No open bets — tap + LOG BET</div></div>
   </div>
   <div class="card">
+    <div class="ct" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Paper Trades — AI Learning</span>
+      <button class="btn btn-gh btn-sm" onclick="loadPaperTrades()" style="font-size:7px;">↻ REFRESH</button>
+    </div>
+    <div id="paperTradeStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;margin-bottom:10px;background:var(--b1);"></div>
+    <div id="paperTradesOpen"></div>
+    <div id="paperTradesClosed" style="margin-top:8px;"></div>
+  </div>
+  <div class="card">
     <div class="ct">Closed Bets — Track Record</div>
     <div id="closedBets"><div class="empty"><div class="ei">▲</div>No closed bets yet</div></div>
   </div>
@@ -2132,9 +2141,8 @@ function renderBets(){
           </div>
         </div>`;
       }).join('');
-  }
+loadPaperTrades();
 }
-
 // Recheck open bet with live search
 async function recheckBet(id){
   const bets=getBets();
