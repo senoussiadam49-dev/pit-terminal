@@ -2,54 +2,12 @@ const CLOB_HOST = 'https://clob.polymarket.com';
 const GAMMA_HOST = 'https://gamma-api.polymarket.com';
 const CHAIN_ID = 137;
 
-let _cachedCreds = null;
-
 async function getApiCreds() {
-  if (_cachedCreds) return _cachedCreds;
-
-  const pk = process.env.POLYMARKET_PRIVATE_KEY;
-  const funder = process.env.POLYMARKET_FUNDER;
-
-  if (!pk || !funder) throw new Error('Missing env vars');
-
-  const { ethers } = await import('ethers');
-  const wallet = new ethers.Wallet(pk.startsWith('0x') ? pk : '0x' + pk);
-  const ts = Math.floor(Date.now() / 1000).toString();
-  const nonce = 0;
-
-  const domain = { name: 'ClobAuthDomain', version: '1', chainId: 137 };
-  const types = {
-    ClobAuth: [
-      { name: 'address', type: 'address' },
-      { name: 'timestamp', type: 'string' },
-      { name: 'nonce', type: 'uint256' },
-      { name: 'message', type: 'string' },
-    ]
-  };
-  const value = {
-    address: funder,
-    timestamp: ts,
-    nonce,
-    message: 'This message attests that I am the owner/operator of this account',
-  };
-
-  const sig = await wallet.signTypedData(domain, types, value);
-
-  const r = await fetch(`${CLOB_HOST}/auth/derive-api-key`, {
-    method: 'GET',
-    headers: {
-      'POLY_ADDRESS': wallet.address,
-      'POLY_SIGNATURE': sig,
-      'POLY_TIMESTAMP': ts,
-      'POLY_NONCE': nonce.toString(),
-      'POLY_SIGNATURE_TYPE': '2',
-    },
-  });
-
-  if (!r.ok) throw new Error(`CLOB auth failed: ${r.status} — ${await r.text()}`);
-  const creds = await r.json();
-  _cachedCreds = creds;
-  return creds;
+  const apiKey = process.env.POLYMARKET_API_KEY;
+  const secret = process.env.POLYMARKET_SECRET;
+  const passphrase = process.env.POLYMARKET_PASSPHRASE;
+  if (!apiKey || !secret || !passphrase) throw new Error('Missing Polymarket API credentials');
+  return { apiKey, secret, passphrase };
 }
 
 async function placeOrder({ tokenId, side, amount, price, tickSize, negRisk }) {
@@ -110,7 +68,7 @@ async function placeOrder({ tokenId, side, amount, price, tickSize, negRisk }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'POLY_ADDRESS': wallet.address,
+      'POLY_ADDRESS': funder,
       'POLY_SIGNATURE': hmacSig,
       'POLY_TIMESTAMP': hmacTs,
       'POLY_API_KEY': creds.apiKey,
