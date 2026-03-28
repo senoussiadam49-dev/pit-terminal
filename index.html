@@ -2153,9 +2153,35 @@ async function loadPaperTrades(){
   const closed=data.filter(t=>t.status==='CLOSED');
   const wins=closed.filter(t=>(t.direction==='YES'&&t.outcome==='YES')||(t.direction==='NO'&&t.outcome==='NO')).length;
   const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);
-  document.getElementById('paperTradeStats').innerHTML=`<div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">OPEN</div><div style="font-family:var(--disp);font-size:18px;color:var(--gd);">${open.length}</div></div><div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">WIN %</div><div style="font-family:var(--disp);font-size:18px;color:var(--cy);">${closed.length?Math.round(wins/closed.length*100)+'%':'—'}</div></div><div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">P&L</div><div style="font-family:var(--disp);font-size:18px;color:${totalPnl>=0?'var(--lm)':'var(--rd)'};">${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}</div></div>`;
-  document.getElementById('paperTradesOpen').innerHTML=open.length?'<div style="font-size:7px;color:var(--gd);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Open ('+open.length+')</div>'+open.map(t=>`<div style="padding:9px 0;border-bottom:1px solid var(--b1);"><div style="font-size:10px;color:var(--t1);font-family:var(--sans);margin-bottom:4px;line-height:1.4;">${t.market_question?.substring(0,70)}${(t.market_question?.length||0)>70?'…':''}</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"><span style="font-size:9px;font-weight:700;color:${t.direction==='YES'?'var(--lm)':'var(--rd)'};">${t.direction}</span><span style="font-size:8px;color:var(--t3);">@ ${t.market_odds}% · True P: ${t.true_p}%</span><span style="font-size:8px;color:var(--gd);">Edge: +${t.edge_pp}pp</span>${t.resolution_date?'<span style="font-size:7px;color:var(--t4);">Resolves: '+t.resolution_date+'</span>':''}</div>${t.thesis?'<div style="font-size:9px;color:var(--cy);font-style:italic;margin-top:4px;">'+t.thesis+'</div>':''}</div>`).join(''):'<div style="font-size:9px;color:var(--t4);padding:8px 0;">No open paper trades</div>';
-  document.getElementById('paperTradesClosed').innerHTML=closed.length?'<div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;margin-top:4px;">Resolved ('+closed.length+')</div>'+closed.map(t=>{const won=(t.direction==='YES'&&t.outcome==='YES')||(t.direction==='NO'&&t.outcome==='NO');return `<div style="padding:8px 0;border-bottom:1px solid var(--b1);"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;"><div style="font-size:10px;color:var(--t1);font-family:var(--sans);flex:1;margin-right:8px;line-height:1.4;">${t.market_question?.substring(0,55)}${(t.market_question?.length||0)>55?'…':''}</div><div style="font-size:12px;font-weight:700;color:${won?'var(--lm)':'var(--rd)'};flex-shrink:0;">${won?'✓ WON':'✗ LOST'}</div></div>${t.lesson?'<div style="font-size:9px;color:var(--cy);background:var(--cydim);border-left:2px solid var(--cybdr);padding:4px 8px;margin-top:4px;line-height:1.5;font-family:var(--sans);">💡 '+t.lesson+'</div>':''}</div>`;}).join(''):'';
+  document.getElementById('paperTradeStats').innerHTML=     '<div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">OPEN</div><div style="font-family:var(--disp);font-size:18px;color:var(--gd);">'+open.length+'</div></div>'+     '<div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">WIN %</div><div style="font-family:var(--disp);font-size:18px;color:var(--cy);">'+(closed.length?Math.round(wins/closed.length*100)+'%':'—')+'</div></div>'+     '<div style="background:var(--bg1);padding:8px 10px;"><div style="font-size:7px;color:var(--t3);letter-spacing:2px;margin-bottom:2px;">P&L</div><div style="font-family:var(--disp);font-size:18px;color:'+(totalPnl>=0?'var(--lm)':'var(--rd)')+';">'+(totalPnl>=0?'+':'')+'$'+totalPnl.toFixed(2)+'</div></div>';
+ document.getElementById('paperTradesOpen').innerHTML=open.length?
+    '<div style="font-size:7px;color:var(--gd);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Open ('+open.length+')</div>'+
+    open.map(t=>
+      '<div style="padding:9px 0;border-bottom:1px solid var(--b1);">'+
+      '<div style="font-size:10px;color:var(--t1);font-family:var(--sans);margin-bottom:4px;line-height:1.4;">'+(t.market_question||'').substring(0,70)+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'+
+      '<span style="font-size:9px;font-weight:700;color:'+(t.direction==='YES'?'var(--lm)':'var(--rd)')+';">'+t.direction+'</span>'+
+      '<span style="font-size:8px;color:var(--t3);">@ '+t.market_odds+'% · True P: '+t.true_p+'%</span>'+
+      '<span style="font-size:8px;color:var(--gd);">Edge: +'+t.edge_pp+'pp</span>'+
+      (t.resolution_date?'<span style="font-size:7px;color:var(--t4);">Resolves: '+t.resolution_date+'</span>':'')+
+      '</div>'+
+      (t.thesis?'<div style="font-size:9px;color:var(--cy);font-style:italic;margin-top:4px;">'+t.thesis+'</div>':'')+
+      '</div>'
+    ).join('')
+    :'<div style="font-size:9px;color:var(--t4);padding:8px 0;">No open paper trades</div>';
+  document.getElementById('paperTradesClosed').innerHTML=closed.length?
+    '<div style="font-size:7px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;margin-top:4px;">Resolved ('+closed.length+')</div>'+
+    closed.map(t=>{
+      const won=(t.direction==='YES'&&t.outcome==='YES')||(t.direction==='NO'&&t.outcome==='NO');
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--b1);">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;">'+
+        '<div style="font-size:10px;color:var(--t1);font-family:var(--sans);flex:1;margin-right:8px;line-height:1.4;">'+(t.market_question||'').substring(0,55)+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(won?'var(--lm)':'var(--rd)')+';">'+(won?'✓ WON':'✗ LOST')+'</div>'+
+        '</div>'+
+        (t.lesson?'<div style="font-size:9px;color:var(--cy);background:var(--cydim);border-left:2px solid var(--cybdr);padding:4px 8px;margin-top:4px;line-height:1.5;font-family:var(--sans);">💡 '+t.lesson+'</div>':'')+
+        '</div>';
+    }).join('')
+    :'';
 }
 
 // Recheck open bet with live search
