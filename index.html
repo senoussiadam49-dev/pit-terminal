@@ -520,6 +520,39 @@ If you haven't run Gemini yet:
 
   <div class="loading" id="sigFeedLoad" style="display:none;"><div class="spin"></div><span id="sigFeedLoadT">Scanning Polymarket + breaking news...</span></div>
 
+ <div id="autoBetPanel" style="margin-bottom:12px;">
+  <div class="ab-toggle" id="abToggle" onclick="toggleAutoBet()">
+    <div>
+      <div class="ab-label" style="color:var(--lm);">⚡ AUTO-BET</div>
+      <div class="ab-status" id="abStatusText">Off — tap to enable automated betting</div>
+    </div>
+    <span class="ab-pill ab-off" id="abPill">OFF</span>
+  </div>
+  <div class="ab-config" id="abConfig" style="display:none;">
+    <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--lm);font-weight:600;margin-bottom:10px;">Auto-bet rules</div>
+    <div class="ab-row"><div class="ab-row-label">Max per bet</div><div class="ab-row-val">$25 USDC</div></div>
+    <div class="ab-row"><div class="ab-row-label">Daily limit</div><div class="ab-row-val">$75 USDC</div></div>
+    <div class="ab-row"><div class="ab-row-label">Min conviction</div><div class="ab-row-val">8/10 + edge ≥ 7pp</div></div>
+    <div class="ab-row"><div class="ab-row-label">Max resolution risk</div><div class="ab-row-val">RR ≤ 2</div></div>
+    <div class="ab-row"><div class="ab-row-label">Wallet balance</div><div class="ab-row-val" id="abWalletBal"><span class="poly-bal">Loading...</span></div></div>
+    <div class="ab-row"><div class="ab-row-label">Spent today</div><div class="ab-row-val" id="abDailySpent">$0 / $75</div></div>
+    <div style="margin-top:10px;display:flex;gap:7px;">
+      <button class="btn btn-gh btn-sm" style="flex:1;" onclick="loadAutoBetLog()">View bet log</button>
+      <button class="btn btn-rd btn-sm" onclick="disableAutoBet()">DISABLE</button>
+    </div>
+  </div>
+  <div id="autoBetQueue" style="display:none;margin-top:8px;">
+    <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--gd);margin-bottom:6px;">⏳ Pending</div>
+    <div id="autoBetQueueItems"></div>
+  </div>
+  <div id="autoBetLog" style="display:none;margin-top:8px;">
+    <div style="font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:6px;display:flex;justify-content:space-between;">
+      <span>Recent auto-bets</span>
+      <span style="cursor:pointer;color:var(--rd);" onclick="document.getElementById('autoBetLog').style.display='none'">✕</span>
+    </div>
+    <div id="autoBetLogItems"></div>
+  </div>
+</div>
   <!-- Signal cards list -->
   <div id="signalFeed"><div class="empty"><div class="ei">◎</div>Tap AUTO-SCAN to find early edges now</div></div>
 
@@ -2872,6 +2905,110 @@ function fmt(t){
     .split('\n').map(l=>l.startsWith('<')||!l.trim()?l:`<p>${l}</p>`).join('\n');
 }
 function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+Object.defineProperties(K,{
+  pmPk:{get(){return localStorage.getItem('pit_pmPk')||'';}},
+  pmFunder:{get(){return localStorage.getItem('pit_pmFunder')||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';}}
+});
+const _origSaveK=saveK;
+function saveK(){_origSaveK();const pk=document.getElementById('kPmPk');const fu=document.getElementById('kPmFunder');if(pk)localStorage.setItem('pit_pmPk',pk.value.trim());if(fu)localStorage.setItem('pit_pmFunder',fu.value.trim());}
+const _origOpenModal=openModal;
+function openModal(){_origOpenModal();const pk=document.getElementById('kPmPk');const fu=document.getElementById('kPmFunder');if(pk)pk.value=K.pmPk;if(fu)fu.value=K.pmFunder||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';}
+let _autoBetOn=false;
+function getAutoBetLog(){return JSON.parse(localStorage.getItem('pit_autobet_log')||'[]');}
+function saveAutoBetLog(l){localStorage.setItem('pit_autobet_log',JSON.stringify(l));}
+function getDailySpent(){const today=new Date().toISOString().split('T')[0];return getAutoBetLog().filter(b=>b.date===today&&b.status==='placed').reduce((s,b)=>s+(b.amount||0),0);}
+async function toggleAutoBet(){
+  if(!_autoBetOn){
+    if(!K.pmPk){toast('Add Polymarket private key in ⚙ Keys first','warn');openModal();return;}
+    toast('Testing Polymarket connection...');
+    try{
+      const r=await fetch('/api/polymarket?action=auth');
+      const d=await r.json();
+      if(!d.ok)throw new Error(d.error||'Auth failed');
+      _autoBetOn=true;updateAutoBetUI(true);loadWalletBalance();
+      toast('Auto-bet enabled ✓');
+    }catch(e){toast('Connection failed: '+e.message,'err');}
+  }else{disableAutoBet();}
+}
+function disableAutoBet(){_autoBetOn=false;updateAutoBetUI(false);toast('Auto-bet disabled');}
+function updateAutoBetUI(on){
+  const toggle=document.getElementById('abToggle');
+  const pill=document.getElementById('abPill');
+  const config=document.getElementById('abConfig');
+  const status=document.getElementById('abStatusText');
+  if(!toggle)return;
+  if(on){toggle.classList.add('active');pill.textContent='ON';pill.className='ab-pill ab-on';config.style.display='block';status.textContent='Active — watching for qualifying signals';document.getElementById('abDailySpent').textContent='$'+getDailySpent().toFixed(2)+' / $75';}
+  else{toggle.classList.remove('active');pill.textContent='OFF';pill.className='ab-pill ab-off';config.style.display='none';status.textContent='Off — tap to enable automated betting';}
+}
+async function loadWalletBalance(){
+  const el=document.getElementById('abWalletBal');if(!el)return;
+  try{const r=await fetch('/api/polymarket?action=balance');const d=await r.json();const bal=d.balance?.balance||d.balance?.USDC||'0';el.innerHTML=`<span class="poly-bal">$${parseFloat(bal).toFixed(2)} USDC</span>`;}
+  catch(e){el.innerHTML=`<span class="poly-bal" style="border-color:var(--rbdr);color:var(--rd);">Error</span>`;}
+}
+async function evaluateSignalForAutoBet(signal){
+  if(!_autoBetOn||!K.pmPk)return;
+  const spent=getDailySpent();
+  if(spent>=75){toast('Daily limit $75 reached','warn');return;}
+  showInQueue(signal);
+  try{
+    const searchResp=await fetch('/api/polymarket?action=search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:(signal.headline||signal.q||'').substring(0,100)})});
+    const searchData=await searchResp.json();
+    const markets=searchData.markets||[];
+    if(!markets.length){removeFromQueue(signal.id);return;}
+    const marketSummary=markets.slice(0,5).map(m=>{const p=m.outcomePrices||[];return `"${m.question}" | ConditionId:${m.conditionId} | Tokens:${JSON.stringify(m.clobTokenIds||[])} | YES:${p[0]||'?'} NO:${p[1]||'?'} | End:${m.endDate||'?'} | Vol:$${parseInt(m.volume||0).toLocaleString()}`;}).join('\n');
+    const evalResp=await claude([{role:'user',content:`Signal: ${JSON.stringify(signal)}\n\nMarkets:\n${marketSummary}\n\nAuto-bet rules: geo/tech/second-order only, RR≤2, edge≥7pp, resolution within 30 days, volume>$50k, no slow political markets.\n\nIf qualifying: return JSON only: {"bet":true,"question":"...","conditionId":"...","tokenId":"...","direction":"YES or NO","marketPrice":0.00,"trueP":0.00,"edge":0.00,"amount":20,"resolutionRisk":1,"reasoning":"one sentence"}\n\nIf not: {"bet":false,"reason":"..."}`}],null,600,false,false);
+    let decision;
+    try{decision=JSON.parse(evalResp.replace(/```json|```/g,'').trim());}catch(e){removeFromQueue(signal.id);return;}
+    removeFromQueue(signal.id);
+    if(!decision.bet){toast('Auto-bet: PASS — '+(decision.reason||'No qualifying market'));return;}
+    if(decision.amount>25)decision.amount=25;
+    if(decision.resolutionRisk>2||decision.edge<7){toast('Auto-bet blocked: criteria not met','warn');return;}
+    if(spent+decision.amount>75)decision.amount=Math.floor(75-spent);
+    if(decision.amount<5){toast('Daily limit nearly reached','warn');return;}
+    toast(`Auto-bet: placing $${decision.amount} ${decision.direction}...`);
+    const placeResp=await fetch('/api/polymarket?action=place',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tokenId:decision.tokenId,side:'BUY',amount:decision.amount,price:decision.marketPrice,tickSize:'0.01',negRisk:false,question:decision.question,marketId:decision.conditionId})});
+    const placeData=await placeResp.json();
+    const betRecord={id:Date.now(),date:new Date().toISOString().split('T')[0],timestamp:new Date().toISOString(),question:decision.question,conditionId:decision.conditionId,direction:decision.direction,amount:decision.amount,marketPrice:decision.marketPrice,trueP:decision.trueP,edge:decision.edge,reasoning:decision.reasoning,status:placeData.ok?'placed':'failed',orderId:placeData.orderId||null,error:placeData.error||null,signalSource:signal.headline||signal.q||''};
+    const log=getAutoBetLog();log.unshift(betRecord);if(log.length>100)log.splice(100);saveAutoBetLog(log);
+    if(K.sbU&&K.sbK)await sbInsert('pit_verdicts',{source:'auto_bet',market_type:'geo',question:decision.question,claude_probability:decision.trueP*100,market_odds:decision.marketPrice*100,edge_pp:decision.edge,verdict:placeData.ok?'AUTO_BET_PLACED':'AUTO_BET_FAILED',stake:placeData.ok?decision.amount:0,direction:decision.direction,is_real:true,notes:decision.reasoning});
+    if(placeData.ok){await sendTg(`🤖 *AUTO-BET*\n${decision.question.substring(0,60)}\n${decision.direction} @ ${(decision.marketPrice*100).toFixed(0)}% | Edge: +${decision.edge}pp | $${decision.amount}\n_${decision.reasoning}_`);toast(`✓ Auto-bet placed: $${decision.amount} ${decision.direction}`);const el=document.getElementById('abDailySpent');if(el)el.textContent='$'+getDailySpent().toFixed(2)+' / $75';}
+    else{toast('Auto-bet failed: '+(placeData.error||'Unknown'),'err');}
+  }catch(e){removeFromQueue(signal.id);toast('Auto-bet error: '+e.message,'err');}
+}
+function showInQueue(signal){
+  const q=document.getElementById('autoBetQueue');const items=document.getElementById('autoBetQueueItems');if(!q||!items)return;
+  q.style.display='block';items.innerHTML+=`<div class="ab-bet-card pending" id="abq_${signal.id||Date.now()}"><div style="font-size:9px;color:var(--gd);margin-bottom:4px;">⏳ Evaluating...</div><div style="font-size:11px;color:var(--t1);font-family:var(--sans);">${(signal.headline||signal.q||'').substring(0,80)}</div></div>`;
+}
+function removeFromQueue(id){const el=document.getElementById('abq_'+id);if(el)el.remove();const items=document.getElementById('autoBetQueueItems');const q=document.getElementById('autoBetQueue');if(items&&!items.children.length&&q)q.style.display='none';}
+function loadAutoBetLog(){
+  const el=document.getElementById('autoBetLog');const items=document.getElementById('autoBetLogItems');if(!el||!items)return;
+  el.style.display='block';const log=getAutoBetLog();
+  if(!log.length){items.innerHTML='<div style="font-size:9px;color:var(--t4);padding:8px 0;">No auto-bets yet</div>';return;}
+  items.innerHTML=log.slice(0,10).map(b=>`<div class="ab-bet-card ${b.status==='failed'?'failed':''}"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-size:8px;color:${b.status==='placed'?'var(--lm)':'var(--rd)'};font-weight:700;">${b.status.toUpperCase()} · ${b.direction} · $${b.amount}</span><span style="font-size:7px;color:var(--t4);">${b.date}</span></div><div style="font-size:10px;color:var(--t1);font-family:var(--sans);margin-bottom:3px;">${(b.question||'').substring(0,70)}</div><div style="font-size:8px;color:var(--t3);">Edge: +${b.edge}pp · Your P: ${(b.trueP*100).toFixed(0)}% vs Mkt: ${(b.marketPrice*100).toFixed(0)}%</div>${b.error?`<div style="font-size:8px;color:var(--rd);margin-top:3px;">${b.error}</div>`:''}</div>`).join('');
+}
+const _origAnalyseSISSignal=analyseSISSignal;
+async function analyseSISSignal(id,headline,thesis){
+  if(_autoBetOn){evaluateSignalForAutoBet({id,headline,second_order:thesis,signal_strength:'HIGH'});}
+  await _origAnalyseSISSignal(id,headline,thesis);
+}
+const _origParseAndRenderSignals=parseAndRenderSignals;
+function parseAndRenderSignals(resp,source){
+  _origParseAndRenderSignals(resp,source);
+  if(!_autoBetOn)return;
+  const match=resp.match(/<signals>([\s\S]*?)<\/signals>/);if(!match)return;
+  try{const signals=JSON.parse(match[1].trim());const q=signals.filter(s=>s.conviction>=8&&s.rr<=2);if(q.length)evaluateSignalForAutoBet({id:Date.now(),headline:q[0].q,second_order:q[0].thesis,q:q[0].q});}catch(e){}
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    const pills=document.querySelector('.pills');
+    if(pills&&!document.getElementById('pmBalPill')){
+      const div=document.createElement('div');div.className='pill';div.id='pmBalPill';
+      div.innerHTML='<div class="dot" style="background:var(--lm);"></div><span id="pmBalText">Poly: —</span>';
+      pills.appendChild(div);
+    }
+    if(K.pmPk){fetch('/api/polymarket?action=balance').then(r=>r.json()).then(d=>{const bal=d.balance?.balance||d.balance?.USDC||'0';const el=document.getElementById('pmBalText');if(el)el.textContent='$'+parseFloat(bal).toFixed(2);}).catch(()=>{});}
+  },800);
+});
 </script>
 </body>
 </html>
