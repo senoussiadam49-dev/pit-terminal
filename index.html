@@ -712,6 +712,7 @@ If you haven't run Gemini yet:
       <div class="mhint">Optional — for bet alerts and verdict notifications.</div></div>
     <div class="mg"><div class="mkl">Telegram Chat ID</div>
       <input type="text" class="field" id="kTgC" placeholder="8148874257"></div>
+    <div class="mg"><div class="mkl">Polymarket Private Key <a href="https://reveal.magic.link/polymarket" target="_blank">↗ Export</a></div><input type="password" class="field" id="kPmPk" placeholder="Your private key from reveal.magic.link/polymarket"><div class="mhint">Required for auto-betting. Never share this.</div></div><div class="mg"><div class="mkl">Polymarket Funder Address</div><input type="text" class="field" id="kPmFunder" placeholder="0x5e12217B961458BF11300F9BdFdCCD73603e5be3"><div class="mhint">Your Polymarket wallet address.</div></div>
     <button class="btn btn-cy btn-full" onclick="saveK()" style="margin-top:8px;">SAVE ALL KEYS</button>
     <button class="btn btn-gh btn-full" onclick="cm()" style="margin-top:7px;">CANCEL</button>
   </div>
@@ -1167,6 +1168,7 @@ function openModal(){
   document.getElementById('kSbK').value=K.sbK;
   document.getElementById('kTgT').value=K.tgt;
   document.getElementById('kTgC').value=K.tgc;
+  const pmPk=document.getElementById('kPmPk');const pmFu=document.getElementById('kPmFunder');if(pmPk)pmPk.value=localStorage.getItem('pit_pmPk')||'';if(pmFu)pmFu.value=localStorage.getItem('pit_pmFunder')||'0x5e12217B961458BF11300F9BdFdCCD73603e5be3';
   document.getElementById('mOv').classList.remove('hidden');
 }
 function cm(){document.getElementById('mOv').classList.add('hidden');}
