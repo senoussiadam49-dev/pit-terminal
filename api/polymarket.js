@@ -91,19 +91,9 @@ async function buildHmac(secret, method, path, body, ts) {
 
 async function getBalance() {
   const funder = process.env.POLYMARKET_FUNDER;
-  const creds = await getApiCreds();
-  const ts = Math.floor(Date.now() / 1000).toString();
-  const hmacSig = await buildHmac(creds.secret, 'GET', '/balance-allowance', '', ts);
-  const r = await fetch(`${CLOB_HOST}/balance-allowance?asset_type=USDC`, {
-    headers: {
-      'POLY_ADDRESS': funder,
-      'POLY_SIGNATURE': hmacSig,
-      'POLY_TIMESTAMP': ts,
-      'POLY_API_KEY': creds.apiKey,
-      'POLY_PASSPHRASE': creds.passphrase,
-    },
-  });
-  return r.json();
+  const r = await fetch(`https://data-api.polymarket.com/balance?user=${funder}`);
+  const d = await r.json();
+  return d;
 }
 
 export default async function handler(req, res) {
