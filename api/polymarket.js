@@ -38,7 +38,7 @@ async function getApiCreds() {
   const r = await fetch(`${CLOB_HOST}/auth/derive-api-key`, {
     method: 'GET',
     headers: {
-      'POLY_ADDRESS': funder,
+      'POLY_ADDRESS': wallet.address,
       'POLY_SIGNATURE': sig,
       'POLY_TIMESTAMP': ts,
       'POLY_NONCE': nonce.toString(),
@@ -110,7 +110,7 @@ async function placeOrder({ tokenId, side, amount, price, tickSize, negRisk }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'POLY_ADDRESS': funder,
+      'POLY_ADDRESS': wallet.address,
       'POLY_SIGNATURE': hmacSig,
       'POLY_TIMESTAMP': hmacTs,
       'POLY_API_KEY': creds.apiKey,
