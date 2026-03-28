@@ -192,30 +192,7 @@ async function getApiCreds() {
   const wallet = new ethers.Wallet(pk.startsWith('0x') ? pk : '0x' + pk);
   const ts = Math.floor(Date.now() / 1000).toString();
   
-  // EIP-712 domain and types for CLOB auth
-  const domain = {
-    name: 'ClobAuthDomain',
-    version: '1',
-    chainId: CHAIN_ID,
-  };
-  
-  const types = {
-    ClobAuth: [
-      { name: 'address', type: 'address' },
-      { name: 'timestamp', type: 'string' },
-      { name: 'nonce', type: 'uint256' },
-      { name: 'message', type: 'string' },
-    ],
-  };
-  
-  const value = {
-    address: funder,
-    timestamp: ts,
-    nonce: 0,
-    message: 'This message attests that I am the owner/operator of this account',
-  };
-  
-  const sig = await wallet.signTypedData(domain, types, value);
+  const sig = await wallet.signMessage(`This message attests that I am the owner/operator of this account\n\nAddress: ${funder}\nTimestamp: ${ts}\nNonce: 0`);
   
   const r = await fetch(`${CLOB_HOST}/auth/derive-api-key`, {
     method: 'GET',
@@ -224,7 +201,7 @@ async function getApiCreds() {
       'POLY_SIGNATURE': sig,
       'POLY_TIMESTAMP': ts,
       'POLY_NONCE': '0',
-      'POLY_SIGNATURE_TYPE': '2',
+      'POLY_SIGNATURE_TYPE': '0',
     },
   });
   
