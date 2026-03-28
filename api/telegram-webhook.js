@@ -7,12 +7,6 @@ export default async function handler(req, res) {
 
   const text = message?.text?.trim().toUpperCase();
   const chatId = message?.chat?.id?.toString();
-  const fromId = message?.from?.id?.toString();
-
-  // Only accept from your chat
-  if (chatId !== process.env.TELEGRAM_CHAT_ID && fromId !== process.env.TELEGRAM_CHAT_ID?.replace('-', '')) {
-    return res.status(200).json({ ok: true });
-  }
 
   const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN_PIT;
   const SB_URL = process.env.SUPABASE_URL;
@@ -46,7 +40,6 @@ export default async function handler(req, res) {
   }
 
   if (text === 'Y' || text === 'YES') {
-    // Find most recent unprocessed real signal (within last 5 minutes)
     try {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const signals = await sbFetch(
@@ -62,15 +55,16 @@ export default async function handler(req, res) {
       const signal = signals[0];
       await sendTg(`⏳ Placing bet: ${signal.direction} on "${signal.market_question?.substring(0, 60)}"...`);
 
-      // Place the bet via Polymarket API
-      const placeResp = await fetch(`${process.env.VERCEL_URL || 'https://pit-terminal.vercel.app'}/api/polymarket?action=place`, {
+      const placeResp = await fetch('https://pit-terminal.vercel.app/api/polymarket?action=place', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tokenId: signal.token_id,
           side: 'BUY',
           amount: 25,
-          price: signal.direction === 'YES' ? signal.market_odds / 100 : (100 - signal.market_odds) / 100,
+          price: signal.direction === 'YES'
+            ? signal.market_odds / 100
+            : (100 - signal.market_odds) / 100,
           question: signal.market_question,
           marketId: signal.condition_id
         })
@@ -79,9 +73,7 @@ export default async function handler(req, res) {
       const result = await placeResp.json();
 
       if (result.ok) {
-        // Mark signal as processed
         await sbUpdate('pit_signals', `id=eq.${signal.id}`, { bet_placed: true, processed: true });
-
         await sendTg(
           `✅ *BET PLACED*\n\n` +
           `*${signal.market_question?.substring(0, 80)}*\n` +
