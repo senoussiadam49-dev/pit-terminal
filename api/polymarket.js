@@ -94,7 +94,7 @@ async function deriveApiCreds(privateKey, nonce = 0) {
       address: signerAddress,
       timestamp: ts,
       nonce: nonce,
-      message: 'This message attests that I control the given wallet',
+      message: 'This message attests that I am the owner/operator of this account',
     };
 
     // Import private key for signing
@@ -212,7 +212,7 @@ async function getApiCreds() {
     address: funder,
     timestamp: ts,
     nonce: 0,
-    message: 'This message attests that I control the given wallet',
+    message: 'This message attests that I am the owner/operator of this account',
   };
   
   const sig = await wallet.signTypedData(domain, types, value);
@@ -224,6 +224,7 @@ async function getApiCreds() {
       'POLY_SIGNATURE': sig,
       'POLY_TIMESTAMP': ts,
       'POLY_NONCE': '0',
+      'POLY_SIGNATURE_TYPE': '2',
     },
   });
   
