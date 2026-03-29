@@ -2454,15 +2454,15 @@ async function buildKnowledgeContext(){
   if(!K.sbU||!K.sbK) return '';
   try{
     const [knowledge, lessons] = await Promise.all([
-      sbFetch('pit_knowledge','order=created_at.desc&limit=15'),
-      sbFetch('pit_lessons','order=created_at.desc&limit=20')
+      sbFetch('pit_knowledge','order=created_at.desc&limit=5'),
+sbFetch('pit_lessons','order=created_at.desc&limit=10')
     ]);
     const lines=[];
     if(knowledge&&knowledge.length){
       lines.push('═══ KNOWLEDGE BASE (read before every analysis) ═══');
       knowledge.forEach(k=>{
         lines.push('['+k.category.toUpperCase()+'] '+k.title+':');
-        lines.push(k.content.substring(0,800));
+        lines.push(k.content.substring(0,200));
         lines.push('');
       });
     }
