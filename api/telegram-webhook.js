@@ -52,11 +52,34 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANT_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 600,
           messages: [{
             role: 'user',
-            content: `Generate one specific actionable lesson (2-3 sentences) from this resolved prediction market trade.\n\nMarket: "${trade.market_question}"\nDirection: ${trade.direction}\nMarket odds: ${trade.market_odds}% | My true P: ${trade.true_p}%\nEdge claimed: ${trade.edge_pp}pp\nOutcome: ${trade.outcome} | Won: ${trade.outcome === trade.direction}\nThesis: ${trade.thesis || ''}\n\nWhat actually happened:\n${resolutionContext}\n\nReturn ONLY the lesson text.`
+            content: `You are extracting a calibration lesson from a resolved prediction market trade. This lesson will be permanently saved to an AI knowledge base and used to improve future trading decisions. Make it specific, actionable, and grounded in what actually happened.
+
+TRADE DETAILS:
+Market: "${trade.market_question}"
+Direction: ${trade.direction} @ ${trade.market_odds}%
+My true P estimate: ${trade.true_p}%
+Edge claimed: ${trade.edge_pp}pp
+Outcome: ${trade.outcome} | ${trade.outcome === trade.direction ? 'WON' : 'LOST'}
+Original thesis: ${trade.thesis || 'not recorded'}
+
+TRADER CONTEXT (what actually happened):
+${resolutionContext}
+
+Extract a structured lesson with these components:
+1. WHAT HAPPENED: What specifically triggered the resolution
+2. THESIS ASSESSMENT: Did the thesis hold, break, or was it a technicality?
+3. CALIBRATION NOTE: Was the probability estimate right or wrong and why?
+4. ACTIONABLE RULE: One specific rule to apply to similar markets in future
+
+Format your response as exactly two lines:
+LESSON: [2-3 sentences combining all four components into one actionable insight]
+PATTERN: [One sentence: what type of market or situation this applies to in future]
+
+Return ONLY the LESSON and PATTERN lines, nothing else.`
           }]
         })
       });
@@ -115,7 +138,26 @@ export default async function handler(req, res) {
     });
 
     if (lesson) {
-      await sbInsert('pit_lessons', { lesson, lesson_type: 'auto', market_type: null, source: `Paper trade: ${trade.market_question?.substring(0, 50)}` });
+      const lessonMatch = lesson.match(/LESSON:\s*(.+?)(?=PATTERN:|$)/s);
+      const patternMatch = lesson.match(/PATTERN:\s*(.+)/s);
+      const lessonText = lessonMatch ? lessonMatch[1].trim() : lesson;
+      const patternText = patternMatch ? patternMatch[1].trim() : null;
+
+      await sbInsert('pit_lessons', {
+        lesson: lessonText,
+        lesson_type: 'auto',
+        market_type: null,
+        source: `Paper trade: ${trade.market_question?.substring(0, 50)}`
+      });
+
+      if (patternText) {
+        await sbInsert('pit_lessons', {
+          lesson: `PATTERN: ${patternText}`,
+          lesson_type: 'auto',
+          market_type: null,
+          source: `Pattern from: ${trade.market_question?.substring(0, 50)}`
+        });
+      }
     }
 
     const won = trade.outcome === trade.direction;
@@ -124,7 +166,7 @@ export default async function handler(req, res) {
       `*${trade.market_question?.substring(0, 80)}*\n` +
       `${trade.direction} → Resolved ${trade.outcome}\n` +
       `P&L: $${trade.pnl >= 0 ? '+' : ''}${trade.pnl}\n\n` +
-      `💡 *Lesson saved to KB:*\n_${lesson ? lesson.substring(0, 300) : 'None extracted'}_`
+      `💡 *Lesson saved to KB:*\n_${lesson ? lesson.substring(0, 400) : 'None extracted'}_`
     );
     return res.status(200).json({ ok: true });
   }
