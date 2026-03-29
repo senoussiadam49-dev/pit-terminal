@@ -5,7 +5,8 @@ export default async function handler(req, res) {
   const message = body?.message;
   if (!message) return res.status(200).json({ ok: true });
 
-  const text = message?.text?.trim().toUpperCase();
+  const text = message?.text?.trim();
+  const textUpper = text?.toUpperCase();
   const chatId = message?.chat?.id?.toString();
 
   const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN_PIT;
@@ -44,17 +45,33 @@ export default async function handler(req, res) {
     });
   }
 
-  async function extractLesson(trade) {
+  async function extractLesson(trade, resolutionContext) {
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': ANT_KEY, 'anthropic-version': '2023-06-01' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANT_KEY,
+          'anthropic-version': '2023-06-01'
+        },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 200,
+          max_tokens: 300,
           messages: [{
             role: 'user',
-            content: `Generate one specific actionable lesson (1-2 sentences) from this resolved prediction market trade.\n\nMarket: "${trade.market_question}"\nDirection: ${trade.direction}\nMy P: ${trade.true_p}% | Market odds: ${trade.market_odds}%\nEdge claimed: ${trade.edge_pp}pp\nOutcome: ${trade.outcome} | Won: ${trade.outcome === trade.direction}\nThesis: ${trade.thesis || ''}\n\nReturn ONLY the lesson text, nothing else.`
+            content: `Generate one specific actionable lesson (2-3 sentences) from this resolved prediction market trade. Focus on what to do differently next time or what was confirmed to work.
+
+Market: "${trade.market_question}"
+Direction: ${trade.direction}
+Market odds: ${trade.market_odds}% | My true P estimate: ${trade.true_p}%
+Edge claimed: ${trade.edge_pp}pp
+Outcome: ${trade.outcome} | Won: ${trade.outcome === trade.direction}
+Original thesis: ${trade.thesis || 'not recorded'}
+
+What actually happened (from trader):
+${resolutionContext}
+
+Return ONLY the lesson text. Be specific and actionable — not generic advice.`
           }]
         })
       });
@@ -65,58 +82,97 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Y reply — could be bet placement OR paper trade resolution
-  if (text === 'Y' || text === 'YES') {
+  // ── Check for pending paper trade resolution ──────────────────────────
+  const pendingTrades = await sbFetch(
+    'pit_paper_trades',
+    'status=eq.PENDING_RESOLVE&order=updated_at.desc&limit=1'
+  );
+  const hasPending = pendingTrades && pendingTrades.length > 0;
 
-    // First check for pending paper trade resolutions
-    const pendingTrades = await sbFetch('pit_paper_trades', 'status=eq.PENDING_RESOLVE&order=resolved_at.desc&limit=1');
-
-    if (pendingTrades && pendingTrades.length) {
-      const trade = pendingTrades[0];
-      await sendTg(`⏳ Extracting lesson from: "${trade.market_question?.substring(0, 60)}"...`);
-
-      const lesson = await extractLesson(trade);
-
-      // Close the trade
-      await sbUpdate('pit_paper_trades', `id=eq.${trade.id}`, {
-        status: 'CLOSED',
-        resolved_at: new Date().toISOString(),
-        lesson: lesson || null
+  // ── Handle N/NO — skip resolution ─────────────────────────────────────
+  if (textUpper === 'N' || textUpper === 'NO') {
+    if (hasPending) {
+      await sbUpdate('pit_paper_trades', `id=eq.${pendingTrades[0].id}`, {
+        status: 'OPEN',
+        notified: false
       });
-
-      // Save lesson to pit_lessons
-      if (lesson) {
-        await sbInsert('pit_lessons', {
-          lesson,
-          lesson_type: 'auto',
-          market_type: null,
-          source: `Paper trade: ${trade.market_question?.substring(0, 50)}`
-        });
-      }
-
-      const won = trade.outcome === trade.direction;
-      await sendTg(
-        `${won ? '✅' : '❌'} *PAPER TRADE CLOSED*\n\n` +
-        `*${trade.market_question?.substring(0, 80)}*\n` +
-        `${trade.direction} → Resolved ${trade.outcome}\n` +
-        `P&L: $${trade.pnl >= 0 ? '+' : ''}${trade.pnl}\n\n` +
-        `${lesson ? `💡 *Lesson saved to KB:*\n_${lesson.substring(0, 200)}_` : 'No lesson extracted'}`
-      );
+      await sendTg('✓ Skipped. Trade kept open for manual review in terminal.');
       return res.status(200).json({ ok: true });
     }
 
-    // No pending paper trade — check for pending real bet signal
+    // Skip real bet signal
     try {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const signals = await sbFetch('pit_signals', `order=created_at.desc&limit=1&bet_placed=eq.false&created_at=gte.${fiveMinAgo}`);
+      if (signals && signals.length) {
+        await sbUpdate('pit_signals', `id=eq.${signals[0].id}`, { processed: true });
+      }
+      await sendTg('✓ Skipped.');
+    } catch (e) {
+      await sendTg('✓ Skipped.');
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // ── If there is a pending paper trade, any non-N message = resolution context ──
+  if (hasPending) {
+    const trade = pendingTrades[0];
+
+    // Y/YES = confirm with no extra context
+    // Anything else = resolution context text from trader
+    const isSimpleConfirm = textUpper === 'Y' || textUpper === 'YES';
+    const resolutionContext = isSimpleConfirm
+      ? `Market resolved ${trade.outcome}. Trader confirmed outcome.`
+      : text; // full text they pasted from Polymarket
+
+    await sendTg(`⏳ Extracting lesson from: _"${trade.market_question?.substring(0, 60)}"_...`);
+
+    const lesson = await extractLesson(trade, resolutionContext);
+
+    // Close the trade
+    await sbUpdate('pit_paper_trades', `id=eq.${trade.id}`, {
+      status: 'CLOSED',
+      resolved_at: new Date().toISOString(),
+      lesson: lesson || null
+    });
+
+    // Save lesson to pit_lessons
+    if (lesson) {
+      await sbInsert('pit_lessons', {
+        lesson,
+        lesson_type: 'auto',
+        market_type: null,
+        source: `Paper trade: ${trade.market_question?.substring(0, 50)}`
+      });
+    }
+
+    const won = trade.outcome === trade.direction;
+    await sendTg(
+      `${won ? '✅' : '❌'} *PAPER TRADE CLOSED*\n\n` +
+      `*${trade.market_question?.substring(0, 80)}*\n` +
+      `${trade.direction} → Resolved ${trade.outcome}\n` +
+      `P&L: $${trade.pnl >= 0 ? '+' : ''}${trade.pnl}\n\n` +
+      `💡 *Lesson saved to KB:*\n_${lesson ? lesson.substring(0, 300) : 'None extracted'}_`
+    );
+    return res.status(200).json({ ok: true });
+  }
+
+  // ── No pending paper trade — handle Y as real bet placement ──────────
+  if (textUpper === 'Y' || textUpper === 'YES') {
+    try {
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const signals = await sbFetch(
+        'pit_signals',
+        `order=created_at.desc&limit=1&bet_placed=eq.false&created_at=gte.${fiveMinAgo}`
+      );
 
       if (!signals || !signals.length) {
-        await sendTg('⚠️ No pending signal or paper trade found.');
+        await sendTg('⚠️ No pending signal found within the 5 minute window.');
         return res.status(200).json({ ok: true });
       }
 
       const signal = signals[0];
-      await sendTg(`⏳ Placing bet: ${signal.direction} on "${signal.market_question?.substring(0, 60)}"...`);
+      await sendTg(`⏳ Placing bet: *${signal.direction}* on _"${signal.market_question?.substring(0, 60)}"_...`);
 
       const placeResp = await fetch('https://pit-terminal.vercel.app/api/polymarket?action=place', {
         method: 'POST',
@@ -125,7 +181,9 @@ export default async function handler(req, res) {
           tokenId: signal.token_id,
           side: 'BUY',
           amount: 25,
-          price: signal.direction === 'YES' ? signal.market_odds / 100 : (100 - signal.market_odds) / 100,
+          price: signal.direction === 'YES'
+            ? signal.market_odds / 100
+            : (100 - signal.market_odds) / 100,
           question: signal.market_question,
           marketId: signal.condition_id
         })
@@ -147,29 +205,6 @@ export default async function handler(req, res) {
       }
     } catch (e) {
       await sendTg(`❌ Error: ${e.message}`);
-    }
-
-  } else if (text === 'N' || text === 'NO') {
-
-    // Check for pending paper trade first
-    const pendingTrades = await sbFetch('pit_paper_trades', 'status=eq.PENDING_RESOLVE&order=resolved_at.desc&limit=1');
-
-    if (pendingTrades && pendingTrades.length) {
-      await sbUpdate('pit_paper_trades', `id=eq.${pendingTrades[0].id}`, { status: 'OPEN', notified: false });
-      await sendTg('✓ Skipped. Trade kept open for manual review.');
-      return res.status(200).json({ ok: true });
-    }
-
-    // Otherwise skip real bet signal
-    try {
-      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const signals = await sbFetch('pit_signals', `order=created_at.desc&limit=1&bet_placed=eq.false&created_at=gte.${fiveMinAgo}`);
-      if (signals && signals.length) {
-        await sbUpdate('pit_signals', `id=eq.${signals[0].id}`, { processed: true });
-      }
-      await sendTg('✓ Skipped.');
-    } catch (e) {
-      await sendTg('✓ Skipped.');
     }
   }
 
