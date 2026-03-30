@@ -133,7 +133,7 @@ export default async function handler(req, res) {
     if (action === 'place') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'POST required' });
       const body = req.body || {};
-      if (body.amount > 25) return res.status(400).json({ error: 'Max $25 per bet' });
+      if (body.amount > 50) return res.status(400).json({ error: 'Max $50 per bet' });
       const result = await placeOrder(body);
       return res.json({ ok: !result.error, ...result });
     }
