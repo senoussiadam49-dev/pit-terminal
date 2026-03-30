@@ -171,13 +171,11 @@ Return ONLY the LESSON and PATTERN lines, nothing else.`
     return res.status(200).json({ ok: true });
   }
 
-  // ── Handle Y/YES — place bet ──────────────────────────────────────────
+  // ── Handle Y/YES ──────────────────────────────────────────────────────
   if (textUpper === 'Y' || textUpper === 'YES') {
     try {
-      // First try to find signal by reply-to message ID (no time limit)
+      // Find signal by reply-to first, then 5 min window
       let signal = await findSignalByReplyId(replyToMessageId);
-
-      // Fallback to 5 min window if not a reply
       if (!signal) {
         const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const signals = await sbFetch('pit_signals', `order=created_at.desc&limit=1&bet_placed=eq.false&created_at=gte.${fiveMinAgo}`);
@@ -189,16 +187,57 @@ Return ONLY the LESSON and PATTERN lines, nothing else.`
         return res.status(200).json({ ok: true });
       }
 
+      // ── Check calibration status ──────────────────────────────────
+      const calRows = await sbFetch('pit_calibration', 'id=eq.1&limit=1');
+      const cal = calRows && calRows.length ? calRows[0] : null;
+      const isCalibrated = cal && cal.is_calibrated === true;
+      const tradesResolved = cal ? (cal.trades_resolved || 0) : 0;
+      const brierScore = cal ? (cal.brier_score || 0.25) : 0.25;
+
+      // ── During calibration — always paper trade ───────────────────
+      if (!isCalibrated) {
+        const stake = signal.kelly_stake || 2.0;
+
+        await sbInsert('pit_paper_trades', {
+          market_question: signal.market_question,
+          condition_id:    signal.condition_id,
+          token_id:        signal.token_id || '',
+          direction:       signal.direction,
+          market_odds:     signal.market_odds,
+          true_p:          signal.true_p,
+          edge_pp:         signal.edge_pp,
+          stake:           stake,
+          resolution_date: signal.resolution_date,
+          thesis:          signal.thesis,
+          status:          'OPEN',
+          scanner:         'C'
+        });
+
+        await sbUpdate('pit_signals', `id=eq.${signal.id}`, { bet_placed: true, processed: true });
+
+        await sendTg(
+          `📝 *PAPER TRADE LOGGED*\n\n` +
+          `*${signal.market_question?.substring(0, 80)}*\n` +
+          `${signal.direction} @ ${signal.market_odds}%\n` +
+          `Stake: $${stake} (paper)\n\n` +
+          `📊 _Calibration: ${tradesResolved}/${30} trades | Brier: ${brierScore.toFixed(3)}_\n` +
+          `_${30 - tradesResolved} more resolved trades needed for real money_`
+        );
+        return res.status(200).json({ ok: true });
+      }
+
+      // ── Calibrated — place real bet ───────────────────────────────
+      const stake = signal.kelly_stake || 2.0;
       await sendTg(`⏳ Placing bet: *${signal.direction}* on _"${signal.market_question?.substring(0, 60)}"_...`);
 
       const placeResp = await fetch('https://pit-terminal.vercel.app/api/polymarket?action=place', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tokenId: signal.token_id,
-          side: 'BUY',
-          amount: 25,
-          price: signal.direction === 'YES' ? signal.market_odds / 100 : (100 - signal.market_odds) / 100,
+          tokenId:  signal.token_id,
+          side:     'BUY',
+          amount:   stake,
+          price:    signal.direction === 'YES' ? signal.market_odds / 100 : (100 - signal.market_odds) / 100,
           question: signal.market_question,
           marketId: signal.condition_id
         })
@@ -212,7 +251,7 @@ Return ONLY the LESSON and PATTERN lines, nothing else.`
           `✅ *BET PLACED*\n\n` +
           `*${signal.market_question?.substring(0, 80)}*\n` +
           `${signal.direction} @ ${signal.market_odds}%\n` +
-          `Amount: $25 USDC\n\n` +
+          `Amount: $${stake} USDC\n\n` +
           `Order ID: ${result.orderId || 'confirmed'}`
         );
       } else {
